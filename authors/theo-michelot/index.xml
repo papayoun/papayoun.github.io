@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Théo Michelot | Pierre Gloaguen</title>
+    <link>/authors/theo-michelot/</link>
+      <atom:link href="/authors/theo-michelot/index.xml" rel="self" type="application/rss+xml" />
+    <description>Théo Michelot</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>en-us</language><lastBuildDate>Thu, 01 Aug 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>img/map[gravatar:%!s(bool=false) shape:circle]</url>
+      <title>Théo Michelot</title>
+      <link>/authors/theo-michelot/</link>
+    </image>
+    
+    <item>
+      <title>The Langevin diffusion as a continuous‐time model of animal movement and habitat selection</title>
+      <link>/publication/2019_langevin/</link>
+      <pubDate>Thu, 01 Aug 2019 00:00:00 +0000</pubDate>
+      <guid>/publication/2019_langevin/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,266 @@
+---
+title: "Principe des méthodes de Monte Carlo"
+author: "Pierre Gloaguen"
+date: "22/03/2020"
+header-includes:
+  - \newcommand{\rmd}{\text{d}}
+  - \newcommand{\R}{\mathbb{R}}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Unif}{\mathcal{U}}
+output:
+  beamer_presentation:
+    dev: cairo_pdf
+  slidy_presentation: default
+---
+
+
+```{r setup, include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE,
+                      cache = TRUE,
+                      fig.width =  5, 
+                      fig.height = 2.5)
+library(tidyverse)
+```
+
+
+```{r theme_set, cache = FALSE}
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 10, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+```{r definition_quantites_necessaires}
+fonction_g <- function(x){
+  d <- 10
+  coeffs <- 0.5 * sin(1:d)
+  sapply(x, function(z){
+    sum(coeffs * z^(0:(d-1)))
+  }) ^ 2
+}
+int_min <- -0.5
+int_max <- 1
+int_length <- int_max - int_min
+true_val <- integrate(fonction_g, int_min, int_max)$value
+fonction_phi <- function(x){
+  int_length * fonction_g(x)
+}
+```
+
+# Exemple introductif (1)
+
+Soit $g$ une fonction sur $\mathbb{R}$ et $a < b$ deux réels.
+
+Supposons que l'on souhaite calculer une intégrale (finie) du type 
+$$I = \int_a^b g(x) \rmd x$$
+
+
+```{r plot_phi}
+tibble(x = seq(-1.2, 1.2, length.out = 1001)) %>%
+  mutate(g_x = fonction_g(x)) %>% # Calcul des valeurs de f
+  mutate(borne_inf = 0) %>%
+  rowwise() %>%
+  mutate(borne_sup = ifelse(test = (x > int_min) & (x < int_max), 
+                            yes = g_x, no = 0)) %>%
+  ggplot() +
+  aes(x = x)  +
+  geom_ribbon(aes(ymin = borne_inf, ymax = borne_sup),
+              fill = "lightblue") +
+  geom_line(aes(y = g_x))  +
+  labs(y = "g(x)")
+```
+
+# Exemple introductif (2)
+
+$$\begin{array}{rl}
+  I &= \int_a^b g(x) \rmd x\\
+  \pause
+  &=  \int_{\R} \overbrace{(b - a) g(x)}^{:= \varphi(x)} \frac{\mathbf{1}_{a\leq x\leq b}}{b - a}\rmd x\\
+  \pause
+  &= \E[\varphi(X)], \text{ où } X\sim\Unif[a,b].
+  \end{array}$$
+\pause
+
+**Estimateur de Monte Carlo**
+
+On fixe un entier $M > 0$.
+On simule un échantillon $X_1,\dots, X_M$ selon $X\sim\Unif[a,b]$, on pose alors l'estimateur:
+$$\hat{I}_M = \frac{1}{M}\sum_{k = 1}^M \varphi(X_k)$$
+\pause
+
+**Remarques**
+
+- $M$ est appelé **effort de Monte Carlo**;
+- On suppose pour le moment qu'on **sait simuler selon $\Unif[a,b]$**;
+- L'estimateur de $I$ est une **variable aléatoire**.
+
+# Exemple introductif (3)
+
+```{r get_mc_estimate}
+get_mc_estimate <- function(M, id){
+  tibble(Estimate = runif(M, int_min, int_max) %>% fonction_phi() %>% mean(),
+         id = id, M = M)
+}
+```
+
+```{r monte_carlo_estimate_ex1}
+c(10, 50, 100, 1000) %>% 
+  purrr::map_dfr(function(my_N) 
+    purrr::map_dfr(1:50, get_mc_estimate, M = my_N)) %>% 
+  mutate(id = factor(id), M = factor(M)) %>% 
+  ggplot(aes(x = M, y = Estimate)) +
+  geom_boxplot() +
+  labs(y = expression(hat(I)[M]),
+       title = "Estimations Monte Carlo de I (50 réplicats)") +
+  geom_hline(yintercept = true_val, 
+             col = "red")
+```
+
+# Cas générique
+
+On veut calculer une intégrale 
+$$I = \int_{\R^d} \varphi(x) f(x) \rmd x$$
+où $f$ est une fonction positive, telle que $\int_{\R^d} f(x)\rmd x = 1$, alors on se sert du fait que
+$$
+I = \E[\varphi(X)]
+$$ 
+où $X$ est une variable aléatoire de densité $f$.
+
+**Estimateur de Monte Carlo**
+
+On fixe un entier $M > 0$.
+On simule un échantillon $X_1,\dots, X_N$ selon $X\sim f(\cdot)$, on pose alors l'estimateur:
+$$\hat{I}_N = \frac{1}{M}\sum_{k= 1}^M \varphi(X_k)$$
+
+# Pourquoi?
+
+Les $\varphi(X_1),\dots,\varphi(X_N)$ sont des variables aléatoires i.i.d. d'espérance $\E[\varphi(X)]$ finie, avec $X\sim f(\cdot)$. \pause
+
+Loi des grands nombres:
+$$\frac{\varphi(X_1) + \dots + \varphi(X_N)}{M} \underset{M\rightarrow\infty}{\overset{\text{p.s.}}{\longrightarrow}} \E[\varphi(X)]$$ 
+
+# Propriétés
+
+**Sans biais**
+$$\E[\hat{I}_N] = \frac{1}{M}\sum_{k = 1}^M \E[\varphi(X_k)] \overset{\text{id. distrib}}{=} \E[\varphi(X)] = I$$
+\pause
+**Variance**
+Si $\mathbb{V}[\varphi(X)] < \infty$
+$$\mathbb{V}[\hat{I}_N] \overset{\text{ind.}}{=} \frac{1}{M^2}\sum_{k = 1}^M \mathbb{V}[\varphi(X_k)] \overset{\text{id. distrib}}{=} \frac{1}{M} \mathbb{V}[\varphi(X)]$$
+\pause
+**Loi** La loi des grands nombres nous donne la loi asymptotique
+$$\sqrt{M}\left(\hat{I}_N - I \right) \underset{M\rightarrow\infty}{\overset{\text{Loi}}{\longrightarrow}} \mathcal{N}(0, \mathbb{V}[\varphi(X)])$$
+
+# Loi de l'estimateur
+
+```{r n_replicates}
+n_replicates <- 100
+M_max <- 1000
+```
+
+- `r n_replicates` réplicats d'échantillons Monte Carlo de taille 
+$M = `r M_max`$.
+
+```{r plot_all_estimates}
+all_estimates <- purrr::rerun(n_replicates, 
+             tibble(phi_u = runif(M_max, int_min, int_max) %>% fonction_phi,
+                    M = 1:M_max) %>% 
+               mutate(Estimate = cumsum(phi_u) / M)
+              ) %>% 
+  bind_rows(.id = "Replicate")
+ggplot(all_estimates, aes(x = M)) +
+  geom_line(aes(y = Estimate, group = Replicate), alpha = 0.1) +
+  geom_hline(yintercept = true_val, 
+             col = "red") +
+  scale_x_continuous(expand = c(0, 0))
+```
+
+# Intervalle de confiance
+
+On note 
+$$\sigma^2 = \mathbb{V}[\varphi(X)].$$
+
+Ainsi, en notant $z_{\alpha}$ le quantile d'ordre $\alpha \in]0, 1[$ de la loi $\mathcal{N} (0, 1)$, si on définit l'intervalle aléatoire 
+$$J_M = \left[\hat{I}_M - z_{1 - \alpha/2}\sqrt{\frac{\sigma^2}{M}}; \hat{I}_M + z_{1 - \alpha/2}\sqrt{\frac{\sigma^2}{M}}\right]$$
+Alors, 
+$$\mathbb{P}(J_M \ni I) \underset{M\rightarrow \infty}{\longrightarrow} 1-\alpha$$
+
+$J_M$ est donc un intervalle de confiance asymptotique au niveau 1 - $\alpha$ pour la valeur de $I$.
+
+# Intervalle de confiance (2)
+
+En pratique cependant, cet intervalle n'est pas calculable car $\sigma^2$ est inconnu 
+
+On dispose cependant d'un estimateur consistant de $\sigma^2$ donné par
+$$\hat{\sigma}^2_M = \frac{1}{M}\sum_{k = 1}^M \left(\varphi(X_k) - \hat{I}_M\right)^2$$
+
+- Dans l'expression précédente, on remplace $\sigma^2$ par son estimateur. 
+- Le lemme de Slutski nous assure que les propriétés de $J_M$ restent vraies.
+
+# Intervalle de confiance (3)
+
+```{r plot_IC}
+z_975 <- qnorm(0.975)
+var_I1 <- integrate(function(x) (fonction_phi(x) -  true_val)^2 / int_length,
+                    int_min, int_max)$value
+bornes_asymp <- tibble(M = 1:M_max) %>% 
+  mutate(borne_sup = true_val + z_975 * sqrt(var_I1 / M),
+         borne_inf = true_val - z_975 * sqrt(var_I1 / M))
+ggplot(all_estimates, aes(x = M)) +
+  geom_ribbon(data = bornes_asymp, 
+              aes(ymin = borne_inf, 
+                  ymax = borne_sup),
+              fill = "goldenrod1") +
+geom_line(aes(y = Estimate, group = Replicate), alpha = 0.1) +
+  geom_hline(yintercept = true_val, 
+             col = "red") +
+  scale_x_continuous(expand = c(0, 0))
+```
+
+# Comparaison avec l'intégration numérique
+
+L'objectif présenté ici est de calculer, en dimension $d$, une intégrale:
+$$\int_{\R^d} g(x) \rmd x$$
+- Calcul possible par méthode numérique (méthode des cubes).\pause
+
+- **Intégration numérique:** Pour une fonction $g$ de classe $C^s$, l'erreur est de l'ordre $\frac{1}{M^{\frac{s}{d}}}$ (où $M$ est le nombre d'évaluations de la fonction).
+    - Il faut connaître la régularité de $g$!
+    - L'erreur augmente avec la dimension.\pause
+
+- **Méthodes Monte Carlo:** Pour les méthodes de Monte Carlo, l'écart type de l'erreur est de l'ordre $\frac{1}{M^{\frac{1}{2}}}$.
+    - Indépendamment de la régularité de $g$!
+    - Indépendamment de la dimension!
+    
+Ainsi, ces méthodes deviennent vite avantageuses quand $d$ est grand.
+
+
+<!-- ```{r} -->
+<!-- in_border <- function(x, epsilon){ -->
+<!--   min(sapply(x, function(z) min(z, 1 - z))) < epsilon -->
+<!-- } -->
+
+<!-- close_plane <- function(x, d, epsilon){ -->
+<!--   abs(sum(x - 0.5)) / sqrt(d) < epsilon -->
+<!-- } -->
+<!-- foo <- function(x, epsil, d){ -->
+<!--   in_border(x, epsil) & close_plane(x, epsil, d) -->
+<!-- } -->
+
+<!-- my_d <- 2 -->
+<!-- my_n <- 1e4 -->
+<!-- # cubature::hcubature(foo, rep(0, my_d), rep(1, my_d), epsil = 0.1, d = my_d, -->
+<!-- #                     maxEval = my_n) -->
+<!-- mean(replicate(my_n, foo(runif(my_d), 0.1, my_d))) -->
+<!-- ``` -->
+
+

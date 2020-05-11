@@ -1,0 +1,725 @@
+---
+title: "Introduction à l'inférence bayesienne"
+author: "Pierre Gloaguen"
+date: "Avril 2020"
+output:
+  beamer_presentation: 
+    dev: cairo_pdf
+    includes:
+      in_header: diapos_headers.tex
+  ioslides_presentation: default
+fontsize: 9pt
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, message = F, cache = F}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE,
+                      cache = TRUE,
+                      fig.width =  7, 
+                      fig.height = 4)
+library(tidyverse)
+```
+
+```{r theme_set, cache = FALSE}
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 12, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+
+```{r donnees_binom}
+n <- 10
+n_pile <- 8
+n_face <- n - n_pile
+max_vrais <- n_pile / n
+```
+
+```{r function_plot_vrais}
+plot_vrais <- function(n, n_pile){
+  n_face <- n - n_pile
+  p <- data.frame(theta = seq(0, 1, length.out = 1001)) %>% 
+    mutate(Vraisemblance = purrr::map_dbl(theta, 
+                                          function(x){
+                                            x^n_pile * (1 - x)^n_face
+                                          })) %>% 
+    ggplot(mapping = aes(x = theta, y = Vraisemblance)) +
+    geom_line() +
+    theme_bw() +
+    scale_x_continuous(breaks = c(0, 0.5, 1), 
+                       labels = c(0, 0.5, 1)) +
+    labs(x = expression(theta)) +
+    geom_vline(xintercept = max_vrais, linetype = 2, col = "red") +
+    geom_text(inherit.aes = F, x = max_vrais + 0.02, col = "red", 
+              label = "hat(theta)", y = 1e-4,
+              parse = T) + 
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  return(p)
+}
+```
+
+## Rappel des cours précédents
+
+- Méthodes de Monte Carlo pour le calcul d'intégrales
+- Echantillonnage préférentiel
+- Méthodes de simulations de variables aléatoires \pause
+- Intérêt statistique?
+    - Permet l'approximation de probabilité (prise de décision)
+    - Point clé de l'inférence bayésienne
+    
+## Objectifs du cours
+
+- Présentation du principe de l'inférence bayésienne;
+- Deux exemples illustratifs;
+- Définition des notions clés;\pause
+- Lien avec le maximum de vraisemblance;
+- Lien avec les premiers chapitres du cours;
+
+
+# Exemple introductif
+
+## Simple modèle paramètrique
+
+### Expérience et question
+
+Supposons que l'on observe n = `r n` tirages indépendant de pile ou face.
+On compte `r n_pile` observations de pile et `r n_face` de face.
+
+Quelle est la probabilité que la pièce tombe sur pile?
+
+### Modélisation
+
+On note $x_1, \dots, x_{`r n`}$ le résultat du lancer (0 si *face*, 1 si *pile*).
+On suppose que ces nombres sont les réalisations de `r n` V.A. $X_1,\dots,X_{10}$ i.i.d. de loi $\mathcal{B}ern(\theta)$ où $\theta \in ]0, 1[$ est la probabilité d'obtenir pile.
+
+Donc, la loi jointe de $\mathbf{X} = (X_1,\dots,X_{n})$ est donnée par:
+$$L(x_1,\dots, x_{n}\vert \theta) = \prod_{k = 1}^{n}\mathbb{P}_\theta(X = x_k) = \theta^{\sum_{k=1}^n x_k}\left(1 - \theta \right)^{n - \sum_{k=1}^n x_k}$$
+où $X \sim \mathcal{B}ern(\theta)$. 
+
+## Inférence par maximum de vraisemblance
+
+Pour un échantillon  $\mathbf{X} = X_1, \dots, X_n$, 
+et pour un paramètre $\theta \in ]0, 1[$, la *vraisemblance* de $\theta$ est:
+$$L(x_{1:n}\vert \theta) = \prod_{k = 1}^{n}\mathbb{P}_\theta(X = x_k) = \theta^{\sum_{k=1}^n x_k}\left(1 - \theta \right)^{n - \sum_{k=1}^n x_k}$$
+
+\pause 
+
+### Maximum de vraisemblance
+
+L'estimateur du maximum de vraisemblance pour $x_{1:n}$ est donné par $\hat{\theta} = \text{argmax}_{\theta}L(x_{1:n}\vert \theta) = \frac{\sum_{i=1}^n x_i}{n}$.
+
+L'estimateur est **entièrement basé sur les données**.
+
+### Incertitude sur $\hat{theta}$
+
+$\hat{\theta}$ est une variable aléatoire. 
+La théorie du MLE nous dit que cet estimateur admet un TCL.
+Ainsi, *asymptotiquement*, on a toujours un intervalle de confiance pour $\theta$.
+Cet IC est aléatoire (mais pas $\theta$!)).
+
+## Vraisemblance pour $n = `r n`$ et `r n_pile` succès
+
+```{r vraisemblance_10}
+print(plot_vrais(n, n_pile))
+```
+
+## Vraisemblance pour $n = `r n * 100`$ et `r n_pile * 100` succès
+
+```{r vraisemblance_1000}
+print(plot_vrais(n * 100, n_pile * 100))
+```
+
+
+## Inférence bayésienne
+
+### A priori sur $\theta$
+
+- On a potentiellement une connaissance *a priori* sur $\theta$. \pause
+- On peut modéliser cet *a priori* sur le paramètre $\theta$ (savoir expert...) 
+par une **variable aléatoire** de densité $\pi(\theta)$. \pause 
+- Cette distribution est appelée **prior** sur $\theta$.\pause
+- Dans ce contexte, $\theta$ est un variable aléatoire, on dispose d'un *a priori* sur sa loi.
+
+```{r df_prior}
+levels_beta <- c("U(0, 1)", "beta(2, 2)", "beta(8, 2)", "beta(2, 8)")
+df_prior <- data.frame(theta = seq(0, 1, length.out = 501)) %>% 
+  mutate(unif   = dunif(theta), 
+         beta22 = dbeta(theta, 2, 2),
+         beta82 = dbeta(theta, 8, 2),
+         beta28 = dbeta(theta, 2, 8)) %>% 
+  tidyr::gather(key = "Distribution", 
+                value = "Densite",
+                -theta) %>%
+  mutate(Distribution = case_when(Distribution == "unif"  ~ levels_beta[1],
+                                  Distribution == "beta22"~ levels_beta[2],
+                                  Distribution == "beta82"~ levels_beta[3],
+                                  Distribution == "beta28"~ levels_beta[4]),
+         Distribution = factor(Distribution, levels = levels_beta),
+         Statut = rep("Prior", nrow(.)))
+```
+
+## Exemples de loi a priori
+
+Aucune idée sur $\theta$
+
+```{r plot_prior_unif, fig.align="center", message = F}
+df_prior %>% 
+  filter(Distribution == "U(0, 1)") %>% 
+  ggplot(aes(x = theta, y = Densite)) + 
+  geom_line() + 
+  lims(y = c(0, 3.5)) +
+  facet_wrap(~Distribution, nrow = 1, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  labs(y = "Densité", x = expression(theta))
+```
+
+**Remarque** une loi $\mathcal{U}[0, 1]$ est **strictement** équivalente à une loi $\mathcal{B}eta(1, 1)$.
+
+## Exemples de loi a priori
+
+A priori léger sur une pièce équitable
+
+```{r plot_prior_beta_equil, fig.align="center", message = F}
+df_prior %>% 
+  filter(Distribution == "beta(2, 2)") %>% 
+  ggplot(aes(x = theta, y = Densite)) + 
+  geom_line() + 
+  lims(y = c(0, 3.5)) +
+  facet_wrap(~Distribution, nrow = 1, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  labs(y = "Densité", x = expression(theta))
+```
+
+## Exemples de loi a priori
+
+A priori fort sur une pièce inéquitable
+
+```{r plot_prior_beta_non_equil, fig.align="center", message = F}
+df_prior %>% 
+  filter(Distribution %in% c("beta(2, 8)", "beta(8, 2)")) %>% 
+  ggplot(aes(x = theta, y = Densite)) + 
+  geom_line() + 
+  facet_wrap(~Distribution, nrow = 1, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  labs(y = "Densité", x = expression(theta))
+```
+
+# Inférence bayésienne
+
+## Inférence bayésienne
+
+\begin{tabular}{cc}
+\includegraphics[width = 0.5\textwidth, height=0.5\textwidth]{figures/formule_bayes_1.png}&
+\includegraphics[width = 0.5\textwidth, height=0.5\textwidth]{figures/formule_bayes_2.png}
+\end{tabular}
+
+## Inférence bayésienne
+
+### Influence des données, distribution a posteriori.
+
+- L'objectif est de l'inférence est de **connaître la distribution de $\theta$ sachant les données**. \pause
+- La densité de cette distribution sur $\theta$ est notée $\pi(\theta \vert \mathbf{x})$, et est appelée **posterior** ou **loi a posteriori**.\pause
+- On **actualise** notre connaissance sur $\theta$ grâce aux données.\pause
+
+### Formule de Bayes
+
+$$\mathbb{P}(B\vert A) = \frac{P(A\vert B)\mathbb{P}(B)}{\mathbb{P}(A)}$$
+\pause
+Dans le cas avec des densités:
+$$
+\pi(\theta \vert x_{1:n}) = \frac{p(x_{1:n}, \theta)}{p(x_{1:n})} = \frac{L(x_{1:n} \vert \theta)\pi(\theta)}{p(x_{1:n})}
+$$
+où $p$ est notation surchargée pour les densités. 
+
+Cette relation est résumée par:
+$$\pi(\theta \vert \mathbf{x}) \propto L(x_{1:n} \vert \theta)\pi(\theta)$$
+
+
+## Objectif de l'inférence Bayésienne
+
+$$\pi(\theta \vert \mathbf{x}) \propto L(x_{1:n} \vert \theta)\pi(\theta)$$
+
+L'inférence Bayésienne a pour but la détermination (exacte, ou par simulation) du posterior $\pi(\theta\vert \mathbf{x})$.
+
+# Exemple 1: modèle avec prior conjugué
+
+## Posterior dans le modèle $\mathcal{B}eta$-Binomial
+
+On revient au cas de pile ou on face où 
+$$L(x_{1:n}\vert \theta) = \prod_{k = 1}^{n}\mathbb{P}_\theta(X = x_k) = \theta^{\sum_{k=1}^n x_k}\left(1 - \theta \right)^{n - \sum_{k=1}^n x_k}$$
+\pause
+Pour l'inférence bayésienne, on pose comme *a priori* que $\theta \sim \mathcal{B}eta(a, b)$, ainsi:
+$$\pi(\theta) = \frac {\theta^{a -1}(1-\theta)^{b -1}}{\int _{0}^{1}u^{a -1}(1-u)^{b -1}\,du}\mathbf{1}_{0 < \theta < 1} \propto \theta^{a -1}(1-\theta)^{b -1}\mathbf{1}_{0 < \theta < 1}$$
+On cherche la loi de $\theta \vert x_{1:n}$.\pause
+\begin{align*}
+\pi(\theta \vert x_{1:n}) &\propto L(x_{1:n}\vert \theta)\pi(\theta)\\
+&\propto \theta^{\sum_{k=1}^n x_k}\left(1 - \theta \right)^{n - \sum_{k=1}^n x_k} \theta^{a -1}(1-\theta)^{b -1}\mathbf{1}_{0 < \theta < 1}\\
+&\propto \theta^{a + \sum_{k=1}^n x_k - 1}(1-\theta)^{b + n - \sum_{k=1}^n x_k -1}\mathbf{1}_{0 < \theta < 1}
+\end{align*} \pause
+On reconnaît que $\pi(\theta\vert \mathbf{x})$ est la densité d'une loi
+$$\theta\vert x_{1:n} \sim \beta\left(a + \sum_{k = 1}^n x_k, b + n - \sum_{k = 1}^n x_k\right)$$
+
+## Cas $n = `r n`$ et `r n_pile` succès
+
+$$\theta\vert x_{1:n} \sim \beta\left(a + \sum_{i}^n x_i, b + n - \sum_{i}^n x_i\right)$$
+
+```{r df_posterior_small_samp, fig.width = 8}
+df_posterior <- data.frame(theta = seq(0, 1, length.out = 501)) %>% 
+  mutate(unif = dbeta(theta, n_pile + 1, n_face + 1), 
+         beta22 = dbeta(theta, 2 + n_pile, 2 + n_face),
+         beta82 = dbeta(theta, 8 + n_pile, 2 + n_face),
+         beta28 = dbeta(theta, 2 + n_pile, 8 + n_face)) %>% 
+  tidyr::gather(key = "Distribution", 
+                value = "Densite",
+                 -theta) %>%
+  mutate(Distribution = case_when(Distribution == "unif"  ~ levels_beta[1],
+                                  Distribution == "beta22"~ levels_beta[2],
+                                  Distribution == "beta82"~ levels_beta[3],
+                                  Distribution == "beta28"~ levels_beta[4]),
+         Distribution = factor(Distribution, levels = levels_beta),
+         Statut = rep("Posterior", nrow(.)))  
+```
+
+```{r plot_prior_posterior_small_samp}
+p_posterior <-  rbind.data.frame(df_prior, df_posterior) %>% 
+  ggplot(aes(x = theta, y = Densite, col = Statut)) + 
+  geom_line() + 
+  facet_wrap(~Distribution, nrow = 1, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  labs(y = "Densité", x = expression(theta), col = "") +
+  scale_color_viridis_d(option = "D")
+print(p_posterior)
+```
+
+## Cas $n = `r n*100`$ et `r n_pile*100` succès
+
+$$\theta\vert x_{1:n} \sim \beta\left(a + \sum_{i}^n x_i, b + n - \sum_{i}^n x_i\right)$$
+
+```{r df_posterior_large_samp, fig.width = 8}
+n_pile_100 <- 100 * n_pile
+n_face_100 <- 100 * n_face
+df_posterior_100 <- data.frame(theta = seq(0, 1, length.out = 501)) %>% 
+  mutate(unif = dbeta(theta, n_pile_100 + 1, n_face_100 + 1), 
+         beta22 = dbeta(theta, 2 + n_pile_100, 2 + n_face_100),
+         beta82 = dbeta(theta, 8 + n_pile_100, 2 + n_face_100),
+         beta28 = dbeta(theta, 2 + n_pile_100, 8 + n_face_100)) %>% 
+  tidyr::gather(key = "Distribution", 
+                value = "Densite",
+                 -theta) %>%
+  mutate(Distribution = case_when(Distribution == "unif"  ~ levels_beta[1],
+                                  Distribution == "beta22"~ levels_beta[2],
+                                  Distribution == "beta82"~ levels_beta[3],
+                                  Distribution == "beta28"~ levels_beta[4]),
+         Distribution = factor(Distribution, levels = levels_beta),
+         Statut = rep("Posterior", nrow(.)))  
+```
+
+```{r plot_prior_posterior_large_samp}
+rbind.data.frame(df_prior, df_posterior_100) %>% 
+  ggplot(aes(x = theta, y = Densite, col = Statut)) + 
+  geom_line() + 
+  facet_wrap(~Distribution, nrow = 1, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  labs(y = "Densité", x = expression(theta), col = "") +
+  scale_color_viridis_d(option = "D")
+```
+
+## Prior conjugué
+
+Pour les modèles basés sur une vraisemblance "classique", certains priors ont des priorités de conjugaison. 
+Pour un modèle Bayésien, on appelle prior conjugué un prior $\pi(\theta)$ tel que le posterior $\pi(\mathbf{x}\vert \theta)$ est dans la même famille de loi que $\pi(\theta)$.
+
+### Exemples
+
+- Modèle Bernouilli-Beta;
+- Modèle Gaussien (prior: Normal Inverse Gamma);
+- Modèle à densités dans la famille exponentielle.
+
+### Intérêt
+
+L'inférence est directe!
+
+# Choix de prior et estimateurs Bayésiens
+
+## Influence et choix du prior
+
+Pour un nombre de données limité, la **forme du prior** a un impact sur la forme du posterior.
+
+\pause
+
+### Choix du prior
+
+La forme du prior peut être choisie en fonction du *savoir expert* (littérature existante, expériences passées). 
+
+**ATTENTION:** Le support du posterior sera toujours inclu dans le support du prior.
+
+\pause
+
+Si le prior charge tout le support de manière égale, on dit qu'il est **non informatif**.
+
+### Prior impropre
+
+Si le support de $\theta$ est sur $\mathbb{R}$, un prior non informatif est une "uniforme sur $\mathbb{R}$". Ceci n'est pas une loi. \pause
+
+On peut cependant noter abusivement $\pi(\theta) \propto 1$.
+Dans ce cas, si $\frac{L(x_{1:n} \vert \theta)}{\int L\left(x_{1:n} \vert \theta\right)\text{d} \theta}$ définit une loi de probabilité en $\theta$, alors le posterior $\pi(\theta\vert \mathbf{x})$ est bien défini. 
+
+- Le prior est alors dit **impropre**.  
+
+## Choix du prior
+
+### Exemple de prior impropre.
+
+On suppose que $\mathbf{x}$ est issu d'un échantillon i.i.d. de taille $n$, de loi $\mathcal{N}(\mu, 1)$ où $\mu$ est inconnu. N'ayant aucune idée de la valeur de $\mu$, on prend un prior non informatif.
+On a alors:
+\begin{align*}
+\pi(\mu \vert x_{1:n}) &\propto L(x_{1:n} \vert \theta)\\
+&\propto \text{e}^{-\frac{1}{2}\sum_{k = 1}^n (x_k - \mu)^2}\\
+&\propto\text{e}^{-\frac{1}{2}(n \mu^2 - 2\mu\sum_{k = 1}^n x_k)}\\
+&\propto\text{e}^{-\frac{n}{2}(\mu - \frac{1}{n}\sum_{k = 1}^n x_k)^2}
+\end{align*}
+Ainsi, $$\mu\vert x_{1:n} \sim \mathcal{N}\left(\frac{1}{n}\sum_{k = 1}^n x_k, \frac{1}{n}\right)$$
+
+## Estimateurs Bayésiens
+
+### Maximum a posteriori (MAP)
+
+Reprenant l'idée du MLE, il s'agit du mode de la distribution a posteriori:
+
+$$MAP(\theta \vert x_{1:n}) = \text{argmax}_\theta \pi(\theta \vert x_{1:n})$$
+\pause
+
+### Exemple sur la modèle Beta binomial
+$$\theta\vert x_{1:n} \sim \beta\left(a + \sum_{k = 1}^n x_k, b + n - \sum_{k = 1}^n x_k\right)$$
+On peut montrer que, pour $a + b + n > 2$ et $a + \sum_{k = 1}^n x_k \geq 1$
+$$MAP(\theta \vert x_{1:n}) = \frac{a + \sum_{k = 1}^n x_k-1}{a  +  b + n -2}$$
+\pause
+On remarque que pour $a = b = 1$ (prior uniforme), il s'agit du maximum de vraisemblance, et que cela tend vers le MV quand $n$ grandit.
+
+## Estimateurs Bayésiens
+
+### Espérance a posteriori
+
+Soit un modèle Bayésien paramétré par une vraie valeur $\theta^* \in \Theta$ et de prior $\pi(\theta)$
+Pour toute fonction $\varphi$, la variable aléatoire $$\mathbb{E}[\varphi(\theta) \vert \mathbf{X}]$$
+est un estimateur Bayésien de $\varphi(\theta^*)$. \pause
+
+Par exemple, pour un échantillon observé $\mathbf{x}$, une estimation bayésienne possible de 
+$\theta^*$ est 
+$$\hat{\theta} = \mathbb{E}[\theta \vert \mathbf{X} = x_{1:n}] = \int_\Theta \theta \pi(\theta \vert x_{1:n}) \text{d}\theta$$
+
+
+
+### Exemple sur la modèle Beta-Binomial
+Pour un prior $\beta(a, b)$, on a 
+$$\hat{\theta} \overset{\text{loi } \beta}{=} \frac{a + \sum_{i = 1}^n x_i}{a + b + n} = \underbrace{\frac{n}{a + b + n}}_{\text{Poids données}}\times \overbrace{\frac{\sum_{i=1}^n x_i}{n}}^{\text{Max. de vrais.}} + \underbrace{\frac{a + b}{a + b + n}}_{\text{Poids prior}} \times \overbrace{\frac{a}{a + b}}^{\mathbb{E}\text{ du prior}}$$
+
+## Estimateurs Bayésiens
+
+### Intervalle de crédibilité
+
+Pour toute région $\mathcal{R} \subset \Theta$, on peut quantifier:
+$$\mathbb{P}(\theta \in \mathcal{R} \vert  \mathbf{X} = x_{1:n}) = \int_\mathcal{R} \pi(\theta \vert x_{1:n}) \text{d}\theta$$
+Pour $\alpha \in ]0, 1[$, une région de crédibilité de niveau $1-\alpha$ est une région $\mathcal{R} \subset \Theta$ telle que 
+$$\mathbb{P}(\theta \in \mathcal{R} \vert  \mathbf{X} = x_{1:n}) = 1 - \alpha$$
+Cet intervalle n'est pas asymptotique, mais **dépend du prior**.
+
+**Remarque**, ici l'aléa est bien sur $\theta$ (contrairement à un intervalle de confiance).
+
+## Intervalles de crédibilités (centrés) à 95% dans le modèle Beta binomial
+
+```{r intervalle_credi}
+q_inf <- 0.025
+q_sup <- 0.975
+df_IC <- data.frame(Distribution = factor(c("U(0, 1)", "beta(2, 2)",
+                                   "beta(8, 2)", "beta(2, 8)"),
+                                 levels =levels_beta),
+           b_inf = qbeta(q_inf,
+                         c(1, 2, 8, 2) + n_pile,
+                         c(1, 2, 2, 8) + n_face),
+           b_sup = qbeta(q_sup,
+                         c(1, 2, 8, 2) + n_pile,
+                         c(1, 2, 2, 8) + n_face)) %>% 
+  dplyr::right_join(x = df_posterior, by = "Distribution") %>% 
+  dplyr::filter(theta >= b_inf & theta <= b_sup)
+p_posterior + geom_ribbon(data = df_IC, ymin = 0, aes(ymax = Densite),
+                          fill = "lightblue", col = NA, alpha = 0.5)
+```
+
+# Exemple 2:  cas non conjugué
+
+## Exemple: Prédiction de présence d'oiseaux
+
+\includegraphics[width = 0.3\textwidth]{figures/linotte.jpeg}
+
+Une étude consiste en l'observation de la présence ou non de la linotte mélodieuse sur différents sites échantillonnés. 
+
+### Caractéristiques des sites
+
+Sur ces différents sites sont mesurées différentes caractéristiques:
+
+- Le nombre de vers moyens sur une surface au sol de $1m^2$. (Covariable 1) 
+- La hauteur d'herbe moyenne sur une surface au sol de $1m^2$. (Covariable 2)
+- On calcule cette hauteur d'herbe au carré. (Covariable 3).
+
+## Données
+
+```{r donnees_presence, echo = F, message =F}
+library(tidyverse)
+rm(list = ls())
+set.seed(123)
+beta_vers <- 3; beta_herbe2 <- -1
+beta_0 <- 0.1 * beta_herbe2 ; 
+beta_herbe <- 2 * beta_herbe2 * beta_0
+beta_true <- c(beta_0, beta_vers, beta_herbe, beta_herbe2)
+n_site <- 30
+gen_y <- function(v, h, h2){
+  prob <- pnorm(beta_0 + v * beta_vers + h * beta_herbe + h2 * beta_herbe2)
+  factor(sample(0:1, size = 1, prob = c(1 - prob, prob)),
+         levels = c(0,1))
+}
+donnees_presence <- mixtools::rmvnorm(n_site, 
+                                mu = c(0, 0), 
+                                sigma = matrix(c(1, 0.5, 0.5, 1), ncol = 2)) %>% 
+  as.data.frame() %>% 
+  rename(dens_vers = V1, haut_herbe = V2) %>% 
+  mutate(haut_herbe_2 = haut_herbe^2) %>% 
+  rowwise() %>% 
+  mutate(presence = gen_y(dens_vers, haut_herbe, haut_herbe_2)) 
+```
+
+```{r plot_donnees_presence}
+ggplot(donnees_presence, aes(x = haut_herbe, y = dens_vers)) +
+  geom_point(aes(col = presence)) + 
+  labs(x = "Hauteur d'herbe", 
+       y = "Densité de vers", 
+       col = "Présence")
+```
+
+## Notations et modèle de régression probit
+
+On note $y_1, \dots, y_n$ les observations de présence (1 si on observe un oiseau, 0 sinon) sur les sites $1$ à $n$.
+
+On note 
+$$\mathbf{x}_k = (\overset{\text{Nb. vers}}{x_{k,1}}, \overset{\text{Haut. herbe}}{x_{k,2}}, \overset{\text{Haut. herbe}^2}{x_{k,3}})^T$$ le vecteur des covariables sur le $k$-ème site $(1\leq k \leq n)$.\pause
+
+On pose le modèle suivant:
+
+$Y_k \sim \mathcal{B}ern(p_k)$
+où 
+$$p_k = \phi(\beta_0 + \beta_1 x_{i1} + \beta_2x_{i2} + \beta_3 x_{i3}) = \phi(\mathbf{x}_k^T\theta),$$
+où 
+
+- $\phi$ est la fonction de répartition d'une $\mathcal{N}(0, 1)$, i.e.
+$$\phi(z) = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^z \text{e}^{-\frac{u^2}{2}}\text{d}u$$
+- $\theta = \left\lbrace \beta_0, \beta_1, \beta_2, \beta_3\right\rbrace$ est le vecteur des paramètres à estimer. 
+
+## Modèle Bayésien
+
+### Prior sur $\theta$
+
+Comme a priori sur $\theta$, on choisit une normale avec une grande variance$\theta \overset{\text{prior}}{\sim} \mathcal{N}(0, 4 I),$ donc 
+$$\pi(\theta) = \frac{1}{\sqrt{2\pi \times 4}^4} \text{e}^{-\frac{1}{8}\theta^T\theta}$$
+où $I$ est la matrice Identité (ici $4 \times 4$) \pause
+
+### Vraisemblance
+
+Pour un vecteur d'observations $y_{1:k}$, la vraisemblance
+$$L(y_{1:n}\vert \theta) = \prod_{k = 1}^n \underset{\text{Proba. présence}}{\phi(\mathbf{x}_k^T\theta)^{y_k}}\times \underset{\text{Proba. absence}}{(1 - \phi(\mathbf{x}_k^T\theta))}^{1 - y_k}$$
+\pause
+
+### Posterior
+
+Le posterior est donc donné par:
+$$\pi(\theta \vert \mathbf{x}) \propto \pi(\theta) L(y_{1:n}\vert \theta) \propto \frac{1}{64\pi^2}\text{e}^{-\frac{1}{8}\theta^T\theta} \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}$$
+
+## Posterior modèle Normal-Probit
+
+$$\pi(\theta \vert y_{1:n}) \propto \pi(\theta) L(y_{1:n}\vert \theta) \propto \frac{1}{64\pi^2}\text{e}^{-\frac{1}{8}\theta^T\theta} \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}$$
+
+Cette densité n'est pas standard:
+
+- On ne sait pas calculer des espérances associées (estimateurs bayésiens);
+- On pourrait approcher ces espérances par méthodes de Monte Carlo\pause
+- Encore faut il savoir simuler!\pause
+- Le cas où le posterior ne fait pas partie d'une famille connue est très fréquent.
+- L'inférence bayésienne est une motivation énorme pour les algos de simulations de loi.
+
+## Simulation posterior modèle Normal-Probit
+
+On veut simuler selon 
+$$\pi(\theta \vert y_{1:n}) \propto \only<4->{\overbrace}{\frac{1}{64\pi^2}\text{e}^{-\frac{1}{8}\theta^T\theta} \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}}^{\only<4->{\tilde{\pi}(\theta\vert y_{1:n})}} $$
+\pause
+
+### Simulation par acceptation rejet
+
+On voudrait simuler selon $\pi(\theta \vert y_{1:n})$.\pause
+
+- Idée 1: trouver une densité $g$ selon laquelle on sait simuler et telle qu'il existe $M>0$ tel que 
+$$\forall \theta \in \mathbb{R}^4,~\frac{\pi(\theta \vert y_{1:n})}{g(\theta)} \leq M$$
+\pause
+Mais $\pi(\theta \vert y_{1:n})$ n'est connu qu'a une constante près!
+$$\pi(\theta \vert y_{1:n}) = \frac{\tilde{\pi}(\theta \vert y_{1:n})}{\int_{\mathbb{R}^4}\pi(u) L(y_{1:n}\vert u) \text{d} u}$$
+
+- **Rappel** L'acceptation rejet marche toujours si on ne connait la loi cible qu'à une constante près! (voir TD pour la preuve).
+
+## Simulation posterior modèle Normal-Probit
+
+On veut simuler selon 
+$$\pi(\theta \vert y_{1:n}) \propto \overbrace{\frac{1}{64\pi^2}\text{e}^{-\frac{1}{8}\theta^T\theta} \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}}^{\tilde{\pi}(\theta\vert y_{1:n})} $$
+
+- Idée 2: trouver une densité $g$ selon laquelle on sait simuler et telle qu'il existe $M>0$ tel que 
+$$\forall \theta \in \mathbb{R}^4,~\frac{\tilde{\pi}(\theta \vert y_{1:n})}{g(\theta)} \leq M$$
+
+## Implémentation de l'acceptation rejet
+
+On peut par exemple prend pour $g$ la densité correspondant au prior ($g(\theta) = \pi(\theta)$).
+On remarque que dans ce cas
+$$\frac{\tilde{\pi}(\theta \vert y_{1:n})}{g(\theta)} = \frac{\pi(\theta)L(y_{1:n}\vert \theta)}{\pi(\theta)} = \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k} \leq 1 =:M$$
+**Remarque:** il existe un $M$ optimal plus petit que 1. \pause
+
+### Algorithme de simulation selont $\pi(\theta\vert y_{1:n})$
+
+1. On tire $\theta_{cand} \sim \mathcal{N}(0, 4I)$
+2. On tire (independamment) $U\sim \mathcal{U}[0, 1]$
+3. Si $U < \frac{L(y_{1:n}\vert \theta)}{M}$, on accepte $\theta_{cand}$
+4. Sinon on recommence
+
+\pause
+
+**Remarque**, l'échantillon obtenu est tiré selon *la loi jointe* (on ne tire pas $\beta_0$ puis $\beta_1$, etc...)
+
+```{r design_and_y_vector}
+design_matrix <- donnees_presence %>% 
+  select(-presence) %>%
+  as.matrix() %>% 
+  cbind(intercept = rep(1, nrow(.)), .)
+y_vector <- donnees_presence %>% 
+  pull(presence) %>% 
+  as.character() %>% 
+  as.numeric() 
+```
+
+```{r get_likelihood_and_M}
+get_likelihood <- function(beta_vec, X = design_matrix, 
+                           y = y_vector, 
+                          log = FALSE){
+  phis <- pnorm(as.numeric(X %*% beta_vec), log.p = T)
+  log_likelihood <- rep(NA, nrow(X))
+  log_likelihood[y == 1] <- phis[y == 1]
+  log_likelihood[y == 0] <- log(1 - exp(phis[y == 0]))
+  if(log){
+    return(sum(log_likelihood))
+  }
+  else
+    return(exp(sum(log_likelihood)))
+}
+M_bound <- optim(beta_true, fn = function(b) -get_likelihood(b, log = TRUE)) %>% 
+  {.$value * (-1)} %>% 
+  exp() %>% 
+  {. * 1.01}
+```
+
+```{r get_sample_accept_reject}
+get_sample_accept_reject <- function(X = design_matrix, 
+                                     y = y_vector,
+                                     M = 1,
+                                     verbose = FALSE){
+  stop_condition <- FALSE
+  ntry <- 0
+  while(!stop_condition){
+    ntry <- ntry + 1
+    candidate <- rnorm(4, 0, 2)
+    stop_condition <- runif(1) < get_likelihood(candidate, X, y) / M
+  }
+  if(verbose){
+    print(paste0("Number of tries: ", ntry))
+  }
+  names(candidate) <- paste0("beta[", 0:3,"]") 
+  enframe(candidate, name = "Parameter", value = "Sample") %>% 
+    mutate(M = M)
+}
+```
+
+```{r posterior_samples}
+library(future)
+future::plan(multisession)
+n_samples <- 1000
+posterior_samples <- furrr::future_map_dfr(1:n_samples,
+                                    function(i) get_sample_accept_reject(M = M_bound), 
+                                    .id = "Replicate") 
+```
+
+## Echantillon du posterior, et loi a posteriori marginales
+
+On effectue un tirage de taille $M = 1000$
+
+```{r plot_posterior_samples}
+ggplot(posterior_samples) +
+  aes(x = Sample) +
+  stat_function(fun = function(x) dnorm(x, sd = 2),
+                mapping = aes(color = "Prior")) +
+  geom_density(mapping = aes(color = "Posterior")) +
+  labs(color = "Distribution") +
+  facet_wrap(.~Parameter, labeller = label_parsed) +
+  geom_hline(yintercept = 0) + 
+  labs(y = "Densité empirique")
+```
+
+- Les données ont bien actualisé la connaissance sur $\theta$
+
+## Echantillon du posterior et loi jointe
+
+On peut regarder la loi jointe de $(\beta_0,\beta_1 \vert y_{1:n})$: 
+
+```{r loi_jointe_beta0_beta1}
+posterior_samples %>% 
+  filter(Parameter %in% c("beta[0]", "beta[1]")) %>% 
+  select(-M) %>% 
+  tidyr::spread(key = "Parameter", value = "Sample") %>% 
+  ggplot(aes_string(x = "`beta[0]`", y = "`beta[1]`")) +
+  geom_point() +
+  geom_density2d() +
+  labs(x = expression(beta[0]),
+       y = expression(beta[1]))
+```
+
+## Estimateurs bayésiens
+
+On prend comme estimateur l'espérance **a posteriori**. 
+De plus, on regarde l'estimation de l'intervalle
+
+```{r affichage_estimation, warning = FALSE}
+posterior_samples %>% 
+  group_by(Parameter) %>% 
+  summarise(Estimation = round(mean(Sample), 3),
+            inf_IC95 = quantile(Sample, prob = 0.025),
+            sup_IC95 = quantile(Sample, prob = 0.975)) %>% 
+  ungroup() %>% 
+  knitr::kable() %>% 
+  kableExtra::kable_styling()
+```
+
+
+## Au delà de l'acceptation rejet
+
+Dans le cas précédent, l'espérance du temps d'attente avant une acceptation est donnée par 
+$$\frac{M}{\int L(y_{1:n}\vert \theta)\pi(\theta) \text{d}\theta}$$
+
+\pause
+
+Mécaniquement, cette quantité augmente quand $n$ augmente, et l'acceptation rejet dvient prohibitif.
+
+En pratique, l'inférence Bayésienne utilisera d'autres algorithmes de simulations de loi: les algorithmes de Monte Carlo par chaîne de Markov.

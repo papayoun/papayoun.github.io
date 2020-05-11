@@ -1,0 +1,127 @@
+---
+title: "Méthodes de Monte Carlo et inférence bayésienne"
+subtitle: "Introduction"
+author: "Pierre Gloaguen"
+date: "pierre.gloaguen@agroparistech.fr"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Déroulé du cours
+
+- 7 séances de 3h;
+- Chaque début de séance consacré aux questions et à la présentation du cours;
+- TD en autonomie ensuite (avec réponse aux questions);
+- Evaluation en contrôle continu (exercices à rendre);
+
+## Objectifs de cette 1ère séance
+
+- Introduction et motivation du sujet du cours;
+- Principe des méthodes de Monte Carlo;
+- Premiers exercices et implémentation sous `R`.
+
+# Introduction et motivations
+
+## Modèlisation statistique
+
+- Formulation probabiliste d'un problème:
+    - *On suppose que les données sont les réalisations de variables aléatoires telles que $\dots$*;
+- Quantification de l'incertitude:
+    - *d'après le modèle posé, la probabilité que tel événement arrive est de $\dots$*;
+- Recours permanent au **calcul de probabilités**;
+
+## Exemple immédiat
+
+- Test d'hypothèse: On veut tester une hypothèse $H_0$ contre une hypothèse $H_1$
+    - *Ex: Comparaison de moyennes de deux échantillons Gaussiens*;
+- On construit une statistique de test $T$;
+- Décision binaire, pour un risque de première espèce $\alpha$, on définit un zone de rejet $\mathcal{R}$, telle que
+
+$$\mathbb{P}_{H_0}\left(T \in \mathcal{R}\right) = \alpha$$
+
+\pause
+
+**Rappel:** 
+$$\mathbb{P}_{H_0}\left(T \in \mathcal{R}\right) = \mathbb{E}_{H_0}\left[\mathbf{1}_{T\in \mathcal{R}}\right]$$
+
+- On doit donc être capable d'évaluer une espérance (ici, la probabilité d'évènements) sous $H_0$ pour construire notre test.
+
+
+## Exemple de modèle statistique: Biomasse d'une population de poisson
+
+\begin{tabular}{cc}
+\multicolumn{2}{c}{\textbf{Ce qu'on connaît}} \\ 
+{\color{red} Captures $C$} & {\color{blue} Observations scientifiques $Y$}\\
+\includegraphics[height = 3cm, width = 0.4\textwidth]{figures/chalutier} & \includegraphics[height = 3cm, width = 0.4\textwidth]{figures/thalassa}\\
+\multicolumn{2}{c}{\textbf{Quantité d'intérêt}}\\ 
+\multicolumn{2}{c}{Biomasse de poisson $X$}  \\ 
+\multicolumn{2}{c}{\includegraphics[width = 0.4\textwidth]{figures/poissons}}
+\end{tabular} 
+\end{frame}
+
+## Modèle probabiliste d'observation de la dynamique de population
+
+\begin{align*}
+X_{t+1} &= \left( X_t + {\color{purple}r} X_t\left(1- \frac{X_t}{\color{purple}K}\right) - {\color{red} C_t} \right) \exp(\varepsilon_{t + 1}), \text{ Biomasse cachée}\\
+{\color{blue} Y_t}\vert X_t &= {\color{purple}q} X_t \exp(\nu_{t}),~ {\color{red} C_t} \text{ Observations}\\
+\varepsilon_t& \overset{i.i.d}{\sim}\mathcal{N}\left(-{\color{purple} \sigma}^2 / 2, {\color{purple}\sigma}^2\right),~~\nu_t\overset{i.i.d}{\sim}\mathcal{N}\left(-{\color{purple}\sigma}_\text{obs}^2 / 2, {\color{purple} \sigma}_\text{obs}^2\right).
+\end{align*}
+
+- $X_t$: Biomasse à l'année $t$ (non observée);
+- $Y_t$: Abundance observée à l'année $t$;
+- $C_t$: Captures à l'année $t$;
+- $K$: Capacité d'accueil du milieu (paramètre);
+- $r$: Taux de croissance de la population (paramètre);
+- $\sigma, \sigma_\text{obs}$: Paramètres de l'aléa;
+- $q$: Détectabilité (paramètre);
+
+## Questions classiques d'inférence
+
+\pause
+- Pour un tel modèle, étant donnée une population initiale $X_0$, quelle est la moyenne attendue du nombre de poissons au bout de 10 ans si on se fixe une quantité de captures?\pause
+    - $\mathbb{E}\left[X_{10} \vert X_0 \right]$?\pause
+- Etant données des observations sur 10 années, et en supposant tous les paramètres connus, que puis je dire sur la quantité de poissons qu'il y avait durant ces 10 ans? \pause
+    - $\mathbb{E}\left[X_{0:10} \vert Y_{0:10} \right]$? \pause
+- Etant données des observations, que puis je dire sur la valeur des paramètres de dynamique de population?\pause
+    - Inférence des paramètres:
+    - Méthode des moments (nécessite un calcul d'espérance);\pause
+    - Méthode du maximum de vraisemblance (nécessite ici un calcul d'espérance);\pause
+    - Estimateur Bayésien: Nécessite un calcul d'espérance. \pause
+    
+Ces espérances n'ont, en général, pas d'expressions directes!
+
+## Méthodes de Monte Carlo
+
+\pause
+- **But:**  Approcher des espérances (intégrales) en utilisant des simulations probabilistes; \pause
+- **Idée:** La loi des grands nombres! La moyenne empirique d'une variable aléatoire va tendre, si on répète l'expérience, vers la moyenne théorique.
+
+## Exemple
+
+On dispose d'un dé à 6 faces et seulement de ce dé. Comment peut on essayer de savoir s'il est biaisé?
+
+- Si on lance le dé suffisament de fois, on obtient une information;\pause
+- Combien de fois faut il lancer le dé pour avoir une idée précise?\pause
+- À quel point peut être confiant en notre réponse?\pause
+- Encore faut il savoir lancer le dé!
+
+## Programme du cours
+
+- Présentation formelle des méthodes de Monte Carlo pour le calcul d'intégrales;
+- Application directe en statistique classique (évaluation d'une probabilité, aide à la décision);\pause
+- Comment peut on simuler des variables aléatoires génériques (avec un ordinateur)?\pause
+- Une méthode d'inférence dépendante de la simulation: l'inférence bayésienne;\pause
+- Une extension nécessaire, les Méthodes de Monte Carlo par chaîne de Markov (MCMC).
+
+## Prérequis
+
+- Résulats statistiques asymptotiques:
+    - Loi des grands nombres, théorème central limite, lemme de Slutsky, Delta méthode.
+- Chaînes de Markov:
+    - Loi de transition, irréductibilité, périodicité, mesure invariante $\dots$
+- Logiciel `R`
+    - Logiciel `R` installé ainsi que l'IDE `Rstudio`.
+    - Connaissance minimale du langage (boucles, fonctions, graphiques de base...).

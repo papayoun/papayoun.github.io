@@ -1,0 +1,22 @@
+\newcommand{\rmd}{\text{d}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\V}{\mathbb{V}}
+\newcommand{\Unif}{\mathcal{U}}
+\newcommand{\Pro}{\mathbb{P}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Nor}{\mathcal{N}}
+\newcommand{\Cov}{\mathbb{C}\text{ov}}
+\newcommand{\I}[1]{\mathbf{1}_{#1}}
+\newcommand{\e}[1]{\text{e}^{#1}}
+\newcommand{\K}{\mathcal{K}}
+\newcommand{\seqN}[1]{\left(#1_n\right)_{n\in\N}}
+\makeatletter
+\let\save@measuring@true\measuring@true
+\def\measuring@true{%
+  \save@measuring@true
+  \def\beamer@sortzero##1{\beamer@ifnextcharospec{\beamer@sortzeroread{##1}}{}}%
+  \def\beamer@sortzeroread##1<##2>{}%
+  \def\beamer@finalnospec{}%
+}
+\makeatother

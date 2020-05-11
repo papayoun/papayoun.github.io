@@ -1,0 +1,36 @@
+\usepackage[utf8]{inputenc}
+\usepackage{natbib}
+\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage{hyperref}
+%\usepackage[light]{kpfonts}
+\usepackage{float}
+\usepackage[linesnumbered,lined,boxed,commentsnumbered, french, onelanguage]{algorithm2e}
+\setlength{\parindent}{0cm}
+%\newenvironment{propriete}[1][]{\refstepcounter{propriete}\par\medskip
+%   \textbf{Propriété~\thepropriete.}\textit{ #1} \rmfamily}{\medskip}
+\theoremstyle{definition}
+\newtheorem{propriete}{Proposition}[section]
+\newtheorem{definition}{Définition}[section]
+
+
+%%%%%%% Commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Pro}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\V}{\mathbb{V}}
+\newcommand{\Unif}{\mathcal{U}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Nor}{\mathcal{N}}
+\newcommand{\Cov}{\mathbb{C}\text{ov}}
+\newcommand{\rmd}{\text{d}}
+\newcommand{\I}[1]{\mathbf{1}_{#1}}
+\newcommand{\e}[1]{\text{e}^{#1}}
+\newcommand{\K}{\mathcal{K}}
+\newcommand{\seqN}[1]{\left(#1_n\right)_{n\in\N}}

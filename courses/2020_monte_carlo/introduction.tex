@@ -1,0 +1,26 @@
+La description d'un phénomène par un modèle probabiliste procure un avantage majeur pour la prise de décision: il permet de quantifier l'incertitude associée au modèle. 
+Ainsi, on pourra construire des outils d'aide à la décision tel que "d'après le modèle posé, la probabilité que tel événement arrive est de $\dots$". Ainsi, être capable de calculer une telle probabilité est un enjeu majeur pour un modèle utile.
+De manière générale, la grande majorité des décisions statistiques se base sur le calcul d'une intégrale. 
+Comme exemple immédiat, on pensera à la procédure du test statistique. Dans cette procédure où l'on doit décider entre deux hypothèses $H_0$ et $H_1$, on décidera sur la base du calcul d'une probabilité (donc d'une intégrale, dans le cas où une fonction de densité existe) sous $H_0$ (la fameuse probabilité critique). 
+
+D'un autre côté, un enjeu majeur en statistiques est, étant donnés un modèle ayant des paramètres inconnus, et un jeu de données (supposé) issu de ce modèle, de définir une procédure d'inférence (un \textit{estimateur}) permettant de "retrouver" les paramètres inconnus.
+
+Plusieurs grandes méthodes existent dans ce cadre:
+\begin{itemize}
+\item Méthode des moments: Les paramètres inconnus sont exprimés sous forme d'une espérance, qui est approchée par les données.
+\item Maximum de vraisemblance: La loi des observations est vue comme une fonction des paramètres, la vraisemblance. On cherche les paramètres qui maximisent cette vraisemblance (appliquée aux données).
+\item Inférence Bayésienne: Les paramètres sont supposés être des variables aléatoires suivant une loi (donnée du modèle). L'objectif de l'inférence Bayésienne est de déterminer la loi des paramètres \textit{sachant les données}. 
+\end{itemize}
+
+Un point essentiel de ces trois méthodes qui justifie ce cours est le besoin récurrent d'évaluer des espérances:
+\begin{itemize}
+\item Méthode des moments: Par définition, on a besoin de connaître les moments d'une loi et de les lier aux paramètres.
+\item Maximum de vraisemblance: Dans énormément de modèle, le calcul direct de la vraisemblance n'est pas faisable. On passera alors par des algorithmes intermédiaires, type Espérance-Maximisation, pour maximiser la vraisemblance. Ces algorithmes demandent d'être capable d'évaluer des espérances.
+\item Inférence Bayésienne: Une fois obtenue la loi des paramètres sachant les observations, on on sera intéressé par des caractéristiques de cette loi (son espérance, la probabilité d'excéder un certain seuil, etc $\dots$).
+\end{itemize}
+
+Encore une fois, toutes ces espérances peuvent s'exprimer sous la forme d'intégrales. 
+
+\paragraph{Point clé et objectif du cours} Le point clé de cette introduction est de vous faire sentir qu'on a constamment besoin, en statistiques, d'évaluer des intégrales. 
+Une classe de méthodes empiriques et génériques pour ce faire est l'ensemble des méthodes de Monte Carlo. 
+L'objectif de ce cours est de vous présenter ces méthodes, leur fondement théorique et leur mise en pratique.

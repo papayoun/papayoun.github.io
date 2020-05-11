@@ -1,0 +1,191 @@
+\subsection{Exemple introductif}
+
+Soit $\varphi$ une fonction sur $\R$ et $a < b$ deux réels.
+
+ Supposons que l'on souhaite calculer une intégrale du type 
+$$I = \int_a^b g(x) \rmd x$$
+On peut remarquer que 
+\begin{align*}
+I &=  \int_{\R} \overbrace{(b - a)g(x)}^{:=\varphi(x)} \frac{\mathbf{1}_{a\leq x\leq b}}{b - a}\rmd x\\
+&= \E[\varphi(U)],\text{ où } U\sim\Unif[a,b]
+\end{align*}
+
+De manière générale, si on veut calculer une intégrale 
+$$I = \int_{\R^d} \varphi(x) f(x) \rmd x$$
+où $f$ est une fonction positive, telle que $\int_{\R^d} f(x)\rmd x = 1$, alors on a que
+\begin{equation}
+\label{eq:I:Exp}
+I = \E[\varphi(X)]
+\end{equation}
+où $X$ est une variable aléatoire de densité $f$.
+
+La loi des grands nombres fournit alors une manière naturelle d'estimer ce type d'intégrale.
+
+\subsection{Résultats asymptotiques}
+
+\begin{propriete}{\textit{Loi forte des grands nombres}}
+\label{prop:LFGN}
+Soient $(X_n)_{n\geq1}$ une suite de variables aléatoires réelles indépendantes et identiquement distribuées, et une fonction $\varphi$ définie sur le support de $X_1$, telles que
+$\E[\vert \varphi(X_1)\vert] < \infty$, alors:
+$$\frac{1}{n}\sum_{k = 1}^n \varphi(X_k) \underset{n \rightarrow + \infty}{\overset{p.s.}{\longrightarrow}}\mathbb{E}[X_1]$$
+\end{propriete}
+
+Ainsi, pour approcher $I$ comme dans $\eqref{eq:I:Exp}$, il suffit de simuler un échantillon $X_1,\dots, X_n$ selon la densité $f$, on pose alors l'estimateur:
+$$\hat{I}_n = \frac{1}{n}\sum_{k= 1}^n \varphi(X_k)$$
+Ainsi, l'estimateur est clairement sans biais, et de plus, de par la loi des grands nombres, il est consistant.
+
+Le théorème central limite permettra d'obtenir un intervalle de confiance asymptotique pour l'estimateur.
+\begin{propriete}{\textit{Théorème central limite}}
+Avec les notations et les hypothèses de \ref{prop:LFGN}, avec l'hypothèse supplémentaire que $\E[\varphi(X)^2]<\infty$, alors
+$$\sqrt{n}\left(\hat{I}_n - I\right) \underset{n\rightarrow \infty}{\overset{Loi}{\longrightarrow}} \Nor (0, \sigma^2)$$
+où $\sigma^2 = \V[\varphi(X)]$.
+\end{propriete}
+
+Ainsi, en notant $z_{\alpha}$ le quantile d'ordre $\alpha \in]0, 1[$ de la loi $\Nor (0, 1)$, si on définit l'intervalle aléatoire 
+$$J_n = \left[\hat{I}_n - z_{1 - \alpha/2}\sqrt{\frac{\sigma^2}{n}}; \hat{I}_n + z_{1 - \alpha/2}\sqrt{\frac{\sigma^2}{n}}\right]$$
+Alors, 
+$$\mathbb{P}(J_n \ni I) \underset{n\rightarrow \infty}{\longrightarrow} 1-\alpha$$
+
+$J_n$ est donc un intervalle de confiance asymptotique au niveau 1 - $\alpha$ pour la valeur de $I$.
+
+En pratique cependant, cet intervalle n'est pas calculable quand $\sigma^2$ ne l'est pas. 
+
+On dispose cependant d'un estimateur consistant de $\sigma^2$ donné par
+$$\hat{\sigma}^2_n = \frac{1}{n}\sum_{k = 1}^n \left(\varphi(X_k) - \hat{I}_n\right)^2$$
+
+On peut utiliser alors le lemme de Slutsky.
+
+\begin{propriete}{\textit{Lemme de Slutsky}}
+\label{prop:slutsky}
+Soient $\seqN{Y}$ et $\seqN{Z}$ deux suites de variables aléatoires. S'il existe une variable aléatoire $Y$ telle que $\seqN{Y}$ converge en loi vers $Y$, et une constante $c$ telle que $\seqN{Z}$ converge en probabilité vers $c$, alors  $$Z_nY_n\underset{n \rightarrow \infty}{\overset{Loi}{\longrightarrow}}cY.$$
+\end{propriete}
+
+Ainsi, par continuité de la fonction $\frac{1}{\sqrt{x}}$,  $\frac{1}{\sqrt{\hat{\sigma}^2_n}}$ est un estimateur consistant de $\frac{1}{\sigma}$ et on a
+
+\begin{propriete}
+$$\frac{\sqrt{n}}{\sqrt{\hat{\sigma}^2_n}}\left(\hat{I}_n - I\right)  \underset{n\rightarrow \infty}{\overset{Loi}{\longrightarrow}} \Nor (0, 1)$$
+\end{propriete}
+
+L'intervalle aléatoire 
+$$J_n = \left[\hat{I}_n - z_{1 - \alpha/2}\sqrt{\frac{\hat{\sigma}_n^2}{n}}; \hat{I}_n + z_{1 - \alpha/2}\sqrt{\frac{\hat{\sigma}_n^2}{n}}\right]$$
+ donc un intervalle de confiance asymptotique au niveau 1 - $\alpha$ pour la valeur de $I$.
+ 
+ 
+ On finira ce rappel des propriétés par la delta-méthode, pratique quand on a accès à un estimateur d'une fonction de la quantité cible. 
+ 
+\begin{propriete}{\textit{Méthode delta}}.
+\label{prop:methode:delta}
+Pour toute fonction $g$ dérivable telle que $g'(I) \neq 0$, alors 
+$$\sqrt{n}\left(g(\hat{I}_n) - g(I)\right) \underset{n\rightarrow \infty}{\overset{Loi}{\longrightarrow}} \Nor (0, (g'(I))^2\sigma^2) $$
+\end{propriete}
+
+\subsection{Comparaison avec l'intégration numérique}
+
+L'objectif présenté ici est de calculer, en dimension $d$, une intégrale:
+$$\int_{\mathbb{R}^d} \varphi(x) \rmd x$$
+Cette intégrale pourrait très bien se calculer par méthodes numériques (en découpe $\mathbb{R}^d$ en cubes de côtés $h$, en on considère $\varphi$ sur ce cube.
+
+Pour une fonction $\varphi$ de classe $C^s$, l'erreur est de l'ordre $\frac{1}{n^{\frac{s}{d}}}$.
+
+Pour les méthodes de Monte Carlo, l'écart type de l'erreur est de l'ordre $\frac{1}{n^{\frac{1}{2}}}$, indépendamment de la dimension et de la régularité de $\varphi$.
+
+Ainsi, ces méthodes deviennent vite avantageuses quand $d$ est grand.
+
+\subsection{Réduction de variance}
+
+Il existe de multiples méthodes pour réduire la variance d'un estimateur Monte Carlo.
+
+Pour le lecteur intéressé, on mentionnera, sans les décrire:
+\begin{itemize}
+\item Les variables antithétiques;
+\item Les variables de contrôle;
+\item Les méthodes de stratification.
+\end{itemize}
+
+Dans cette section, on discutera d'une autre méthode, générique, et très utile, l'échantillonnage préférentiel.
+
+\subsubsection{Échantillonnage préférentiel}
+
+On cherche à estimer une intégrale du type:
+$$I = \int_{\Omega} \varphi(x) f(x)\rmd x = \mathbb{E}_X[\varphi(X)]$$
+où $\Omega \subset \R^d$, et $f$ est une densité de probabilité sur $\Omega$ (on suppose, quitte à renormaliser, que $f(x) = 0$ pour $x \not\in \Omega$) et $X$ la variable aléatoire correspondante. 
+Soit $g$ une densité de probabilité telle que $x\in \Omega \Rightarrow g(x) > 0$ et $Y$ la variable aléatoire correspondante, alors il est clair que:
+$$I =  \int_{\Omega} \varphi(x) \frac{f(x)}{g(x)}g(x)\rmd x = \mathbb{E}\left[\varphi(Y) \frac{f(Y)}{g(Y)}\right]$$
+Comme estimateur de $I$, on peut ainsi proposer l'estimateur:
+$$\hat{I}^{IS}_n = \frac{1}{n}\sum_{i = 1}^n \varphi(Y_i) \frac{f(Y_i)}{g(Y_i)}$$
+où $Y_1,\dots,Y_n$ est un échantillon i.i.d. de variables aléatoires sur $\R^d$ de densité $g$.
+
+ La variable aléatoire $W(Y_i) = \frac{f(Y_i}{g(Y_i)}$ est appelée poids d'importance de $Y_i$. Cette appellation sera sans doute plus claire plus bas.
+On peut voir immédiatement que l'estimateur d'échantillonnage préférentiel reste sans biais.
+
+Intéressons nous à sa variance:
+\begin{align*}
+\V[\hat{I}^{IS}_n] &= \frac{1}{n}\left(\E_Y\left[\left(\varphi(Y) \frac{f(Y)}{g(Y)}\right)^2\right] - I^2\right)\\
+&=\frac{1}{n}\int_{\R^d}\left( \frac{(\varphi(y)f(y))^2}{g(y)^2} - I^2\right) g(y)\rmd y\\
+&= \frac{1}{n}\int_{\R^d} \frac{(\varphi(y)f(y))^2 - I^2g(y)^2}{g(y)} \rmd y\\
+&= \frac{1}{n}\int_{\R^d}\frac{\left(\varphi(y)f(y) - Ig(y)\right)^2}{g(y)} + 2I\varphi(y)f(y) - 2I^2g(y) \rmd y\\
+&=\frac{1}{n}\left\lbrace \int_{\R^d}\frac{\left(\varphi(y)f(y) - Ig(y)\right)^2}{g(y)} \rmd y  + 2 I\left(\int_{\R^d}\phi(y)f(y)\rmd(y) -I\int_{\R^d}g(y)\rmd(y) \right)\right\rbrace\\
+&=\frac{1}{n}\int_{\R^d}\frac{\left(\varphi(y)f(y) - Ig(y)\right)^2}{g(y)} \rmd y
+\end{align*}
+Donc la variance est nulle quand $g(x) = \frac{\varphi(x)f(x)}{I}$. 
+Ce $g$ optimal n'est pas d'une grande utilité car $I$ est inconnu en pratique. Par contre, l'idée sous jacente doit rester qu'une bonne loi de proposition doit avoir de la masse là où $\varphi\times f$ a de la masse. 
+Il faut donc trouver une densité dont la masse est un compromis entre là où $f$ a de la masse, et là où $\varphi$ prend des grandes valeurs.
+
+Notons également que si $g$ est très petit là où  $\varphi\times f$ est non négligeable, alors la variance sera très grande!
+
+\subsubsection{Échantillonnage préférentiel normalisé}
+
+Supposons, cas fréquent, que $f$ ne soit connue qu'à une constante près. 
+
+C'est à dire que l'on ait accès qu'à une fonction positive (non normalisée) $f^{(u)}$ telle que $\int f^{(u)} = c$ On a lors, $f(x) = f^{(u)}(x) / c$.
+
+Dans ce cas, on peut toujours approcher l'intégrale:
+
+$$I = \mathbb{E}[\varphi(X)] = \int_{\Omega} \varphi(x) f(x) d(x)$$
+
+par l'estimateur:
+$$\hat{I}^{IS,u}_n = \sum_{i = 1}^n \varphi(Y_i) \frac{f^{(u)}(Y_i)/g(Y_i)}{\sum_{\ell = 1}^n f^{(u)}(Y_\ell) / g(Y_\ell)}$$
+\begin{propriete}
+$\hat{I}^{IS,u}_n \overset{Proba}{\longrightarrow} I$
+\end{propriete}
+\begin{proof}
+On définit:
+\begin{align*}
+w_i &= \frac{f(Y_i)}{g(Y_i)}\\
+w_i^{(u)} &= \frac{f^{(u)}(Y_i)}{g(Y_i)}\\
+\tilde{w}_i &= \frac{w_i}{\sum_{\ell = 1}^n w_\ell}\\
+\tilde{w}^{(u)}_i &= \frac{w^{(u)}_i}{\sum_{\ell = 1}^n w^{(u)}_\ell}
+\end{align*}
+On remarque, par définition de $f^{(u)}$ que $\tilde{w}_i = \tilde{w}^{(u)}_i$, donc:
+$$\hat{I}^{IS,u}_n = \sum_{i = 1}^n \tilde{w}^{(u)}_i \varphi(Y_i) = \sum_{i = 1}^n \tilde{w}_i \varphi(Y_i)\\
+= \frac{\frac{1}{n} \sum_{i = 1}^n \tilde{w}_i \varphi(Y_i)}{\frac{1}{n}\sum_{\ell = 1}^n \tilde{w}_\ell}$$
+Le numérateur converge presque sûrement vers $I$ (il s'agit de l'estimateur IS vu plus haut). 
+Quand au dénominateur, en constatant que $\mathbb{E}[w_i] = 1$, on a qu'il converge presque sûrement vers 1. Ainsi, par la proposition \ref{prop:slutsky}, le ratio converge en loi vers la constante $I$ (ce qui est équivalent à une convergence en probabilité vers cette constante).
+\end{proof}
+On peut également caractériser la variance asymptotique de l'estimateur.
+\begin{propriete}
+$$\sqrt{n}\left(\hat{I}^{IS,u}_n - I \right) \overset{Loi}{\longrightarrow} \mathcal{N}(0, \V[\hat{I}_1^{IS} - IW(Y_1)])$$
+\end{propriete}
+\begin{proof}
+On notera tout d'abord une extension naturelle de la méthode delta (Propriété \ref{prop:methode:delta}). Pour un vecteur $\beta \in \R^d$, un estimateur $\hat{\beta}_n$ de $\beta$ et une fonction $C^1$ $h: \mathbb{R}^d \mapsto \mathbb{R}$ telle que le gradient en $\beta$ ne s'annule pas, alors:
+$$\sqrt{n}\left(\hat{\beta}_n - \beta \right) \overset{Loi}{\longrightarrow} \mathcal{N}(0, \Sigma) \Rightarrow \sqrt{n}\left(h(\hat{\beta}_n) - h(\beta) \right) \overset{Loi}{\longrightarrow} \mathcal{N}(0, \nabla h(\beta)^T\Sigma \nabla h(\beta))$$
+où $\Sigma$ est une matrice de covariance $d\times d$.
+
+Notons $\hat{W}_n = \frac{1}{n}\sum_{i = 1}^n w_i$. On définit alors $\hat{\beta}_n$, $\beta$ et $\Sigma$ comme :
+\begin{align*}
+\hat{\beta}_n &= \begin{pmatrix}
+\hat{I}_n^{IS}\\
+\hat{W}_n
+\end{pmatrix}\\
+\beta &= \begin{pmatrix}
+I\\
+1
+\end{pmatrix}\\
+\Sigma &= \begin{pmatrix}
+\V[\hat{I}_1^{IS}] & \Cov[\hat{I}_1^{IS}, \hat{W}_1]\\
+\Cov[\hat{I}_1^{IS}, \hat{W}_1] & \V[\hat{W}_1]
+\end{pmatrix}.
+\end{align*}
+La fonction $h$ est alors la fonction $h(x,y) = x / y$. On a alors:
+$$\nabla h(\beta)^T\Sigma \nabla h(\beta)) = \V[\hat{I}_1^{IS} - I \hat{W}_1]$$ 
+\end{proof}

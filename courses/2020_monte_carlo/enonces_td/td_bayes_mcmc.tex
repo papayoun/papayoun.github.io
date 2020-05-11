@@ -1,0 +1,463 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Inférence bayésienne et méthodes MCMC},
+            pdfauthor={Pierre Gloaguen},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Inférence bayésienne et méthodes MCMC}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+  \subtitle{Travaux dirigés}
+  \author{Pierre Gloaguen}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+\maketitle
+
+\hypertarget{infuxe9rence-bayuxe9sienne-pour-le-moduxe8le-linuxe9aire}{%
+\section{Inférence bayésienne pour le modèle
+linéaire}\label{infuxe9rence-bayuxe9sienne-pour-le-moduxe8le-linuxe9aire}}
+
+Soit \(Y\) un vecteur d'observations de \(\mathbb{R}^n\), \(\beta\) un
+vecteur de paramètres inconnus \(\mathbb{R}^{p + 1}\) (tel que
+\(n > p + 1\)) et \(X\) une matrice \(n \times (p +1)\) telle que la
+matrice \(X^T X\) soit inversible. On considère le modèle linéaire
+Gaussien: \[Y = X\beta + E\] où \(E\) est un vecteur Gaussien de loi
+\(\mathcal{N}(0, \sigma^2I_n)\).
+
+\hypertarget{cas-ouxf9-sigma2-est-connu}{%
+\subsection{\texorpdfstring{Cas où \(\sigma^2\) est
+connu}{Cas où \textbackslash{}sigma\^{}2 est connu}}\label{cas-ouxf9-sigma2-est-connu}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Dans le cas où \(\sigma^2\) est connu, écrire la vraisemblance
+  associée au modèle précédent. Montrer que cette vraisemblance est
+  proportionelle, en tant que densité de probabilité pour le vecteur
+  \(\beta\), à la densité d'un loi
+  \(\mathcal{N}((X^TX)^{-1}X^TY, \sigma^2 (X^TX)^{-1})\). En déduire la
+  densité a posteriori sur \(\beta\) pour une inférence bayésienne
+  effectuée avec un prior impropre.
+\end{enumerate}
+
+\hypertarget{cas-ouxf9-sigma2-est-inconnu}{%
+\subsection{\texorpdfstring{Cas où \(\sigma^2\) est
+inconnu}{Cas où \textbackslash{}sigma\^{}2 est inconnu}}\label{cas-ouxf9-sigma2-est-inconnu}}
+
+Dans ce cas, on pose comme loi a priori que le couple
+\((\beta, \sigma^2)\) suit une loi normale inverse Gamma de paramètres
+\(\mu \in \mathbb{R}^{p +1}\), \(V\) (une matrice de variance-covariance
+de taille \((p+1) \times (p+1)\), \(a\) et \(b\) (deux réels positifs).
+
+Formellement:
+\[\pi(\beta ,\sigma^{2}\vert \mu , \mathbf{V},a ,b )\propto
+\left({\frac {1}{\sigma ^{2}}}\right)^{\frac{p +1}{2}}\left({\frac {1}{\sigma ^{2}}}\right)^{a + 1}\exp \left(-\frac{b}{\sigma^2}\right)\exp \left(-{\frac {(\beta -\mu)^T\mathbf {V} ^{-1}(\beta - \mu)}{2\sigma ^{2}}}\right).\]
+\textbf{Remarque} Cette modélisation est en fait assez naturelle, elle
+correspond au cas où \(\sigma^2\) suit une loi inverse
+\(\mathcal{G}amma(a, b)\)) (usuelle pour les variances) et
+\(\beta \vert \sigma^2\sim \mathcal{N}(\mu, \sigma^2V)\).
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  Montrer que la loi de \((\beta,\sigma^2)\vert Y, X\) suit également
+  une loi Normale inverse Gamma dont vous préciserez les paramètres.
+\item
+  Interprétez les paramètres en terme ``d'apprentissage bayésien'',
+  c'est à dire en distinguant le poids du prior et des données.
+\end{enumerate}
+
+\hypertarget{moduxe8le-probit-avec-covariables}{%
+\section{Modèle probit avec
+covariables}\label{moduxe8le-probit-avec-covariables}}
+
+On reprend l'exemple vu en cours et dans l'exercice 5 du TD3 sur
+l'estimation de covariables corrélées à la présence d'oiseaux.
+
+\hypertarget{notations-et-moduxe8le}{%
+\subsection{Notations et modèle}\label{notations-et-moduxe8le}}
+
+On note \(y_1, \dots, y_n\) les observations de présence (1 si on
+observe un oiseau, 0 sinon) sur les sites \(1\) à \(n\).
+
+On note \(x_{ij}\) la valeur de la \(j\)-ème (\(1\leq j \leq 3\))
+covariable sur le \(i\)-ème site.
+
+On suppose que les \(y_1, \dots, y_n\) sont les réalisations de
+variables aléatoires \(Y_1, \dots, Y_n\) telles que
+
+\(Y_i \sim \mathcal{B}ern(p_i)\) où
+\[p_i = \phi(\beta_0 + \beta_1 x_{i1} + \beta_2x_{i2} + \beta_3 x_{i3}) = \phi(\mathbf{x}_i^T\theta)\]
+où \(\theta = (\beta_0,\dots, \beta_3)^T\) et \(\phi\) la fonction de
+répartition d'une \(\mathcal{N}(0, 1)\). L'objectif est d'estimer le
+vecteur \(\theta\) dans un cadre bayésien.
+
+\hypertarget{vraisemblance-et-posterior}{%
+\subsubsection{Vraisemblance et
+posterior}\label{vraisemblance-et-posterior}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Rappelez l'expression de la vraisemblance d'un paramètre \(\theta\)
+  pour vecteur d'observations \(\mathbf{y}\) ainsi que l'expression du
+  posterior associée à un prior \(\mathcal{N}(0, 4I_4)\).
+\end{enumerate}
+
+\hypertarget{algorithme-de-metropolis-hastings}{%
+\subsection{Algorithme de Metropolis
+Hastings}\label{algorithme-de-metropolis-hastings}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{1}
+\item
+  On se propose d'approcher la loi \emph{a posteriori} en utilisant un
+  algorithme MCMC. Plus précisemment, on se propose de générer une
+  chaîne de Markov \((\theta_n)_{n\geq 0}\) dont l'unique loi
+  stationnaire est le posterior défini plus haut. Pour cela, on
+  utilisera un algorithme de Metropolis Hastings dont le noyau de
+  transition est une marche aléatoire de loi normale
+  \(\mathcal{N}(0, \sigma^2 I_4)\) où \(I_4\) est la matrice identité
+  \(4\times 4\). Définir l'algorithme de Metropolis Hastings pour un jeu
+  de données \(\mathbf{y}\).
+\item
+  Le fichier \texttt{donnees\_presence\_complet.txt} contient les
+  observations de 300 sites sur lesquels la présence d'oiseaux a été
+  constatée, ainsi que différentes variables environnementales mesurées.
+  Ecrire un programme \texttt{R} codant l'algorithme de Metropolis
+  Hastings précédent pour ce jeu de données. Vous testerez plusieurs
+  valeurs de \(\sigma^2\) pour la variance de la marche aléatoire, et
+  choisirez celle qui vous semble la meilleure.
+\item
+  Pour le \(\sigma^2\) choisi quelle est la probabilité d'acceptation
+  empirique?
+\item
+  Quelle est la valeur réalisée de l'estimateur Bayésien
+  \(\mathbb{E}[\theta \vert \mathbf{Y}]\)?
+\item
+  Donner un intervalle de crédibilité pour chacun des paramètres.
+\end{enumerate}
+
+\hypertarget{metropolis-hastings-et-loi-de-muxe9lange}{%
+\section{Metropolis Hastings et loi de
+mélange}\label{metropolis-hastings-et-loi-de-muxe9lange}}
+
+On s'intéresse à simuler à la loi d'un mélange de deux Gaussiennes:
+\[f(x) = \frac{1}{2} f_Z(x - 4) + \frac{1}{2}f_Z(x + 4)\]
+
+où \(f_Z\) est la densité d'une loi \(\mathcal{N}(0, 1)\).
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  À l'aide du logiciel \texttt{R}, tracez la densité de cette loi.
+\item
+  On se propose de construire un algorithme de Metropolis Hastings pour
+  simuler une chaîne de Markov de loi stationnaire \(f\) à partir d'une
+  marche aléatoire d'étendue uniforme. Plus précisemment, pour
+  \(\alpha \in \mathbb{R}^*_+\), à partir d'une position \(X = x\), on
+  définit la prochaine position \(Y\vert X = x\) comme une variable
+  aléatoire de densité
+  \[q_\alpha(x, y) = \mathbf{1}_{x - \alpha \leq y \leq x + \alpha}\]
+
+  \begin{enumerate}
+  \def\labelenumii{\alph{enumii}.}
+  \tightlist
+  \item
+    Ecrire un code \texttt{R} permettant de simuler selon cette loi.
+  \item
+    Justifier que pour toute régions \(A\) et \(B\) de \(\mathbb{R}\),
+    on peut accéder de \(A\) à \(B\) en un nombre fini de pas.
+  \end{enumerate}
+\item
+  Définir l'algorithme de Métropolis Hastings pour simuler une chaîne de
+  Markov \((X_n)_{n\geq 0}\), de loi stationnaire \(f\) partir du noyau
+  de Markov \(q_\alpha\) et d'un point de départ \(x_0\).
+\item
+  Implémentez cet algorithme en \texttt{R} pour \(\alpha = 0.01\) à
+  partir de \(x_0 = 0\), pour \(n = 5000\). Faites tourner cet
+  algorithme plusieurs fois, que constatez vous?
+\item
+  Implémentez cet algorithme en \texttt{R} pour \(\alpha = 5\) et à
+  partir de \(x_0 = -10\). Faites tourner cet algorithme plusieurs fois,
+  que constatez vous?
+\item
+  Dans les deux cas, donnez la probabilité d'acceptation empirique de
+  l'algorithme (ou le nombre d'essai moyen avant de faire un pas dans la
+  chaîne).
+\end{enumerate}
+
+\hypertarget{echantillonneur-de-gibbs}{%
+\section{Echantillonneur de Gibbs}\label{echantillonneur-de-gibbs}}
+
+\emph{Cet exercice est un exemple trivial d'implémentation (inutile
+ici!) de l'échantillonneur de Gibbs}
+
+On veut simuler par échantillonneur de Gibbs un échantillon de vecteur
+aléatoire (X, Y) distribué selon la loi
+\(\mathcal{N}\left(0, \begin{pmatrix} 1 & \rho\\ \rho& 1\end{pmatrix}\right)\).
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  Donnez la loi conditionnelle de \(Y\vert X\) et \(X \vert Y\).
+\item
+  Implémentez un échantillonneur de Gibbs partant du point (10, 10) pour
+  simuler selon la loi jointe de \((X, Y)\).
+\item
+  \emph{Burn-in:} Vérifiez empiriquement que l'algorithme converge vers
+  la loi voulue. Quelle partie initiale de la chaîne simulée conseillez
+  vous d'omettre?
+\item
+  \emph{Thinning:} Regardez la fonction d'autocorrélation de
+  l'échantillon simulé. Quelle proportion de l'échantillon préconisez
+  vous de gardez en pratique poour avoir un échantillon qu'on pourra
+  supposer indépendant?
+\end{enumerate}
+
+\hypertarget{duxe9cryptage-bayuxe9sien}{%
+\section{Décryptage bayésien}\label{duxe9cryptage-bayuxe9sien}}
+
+\begin{verbatim}
+[1] "CECI SERA LE DERNIER DEVOIR DU COURS."
+\end{verbatim}
+
+\hypertarget{pruxe9sentation-du-probluxe8me}{%
+\subsection{Présentation du
+problème}\label{pruxe9sentation-du-probluxe8me}}
+
+On se place dans le cadre où on dispose d'un alphabet de taille finie,
+disons \(K\). Chaque élément de l'alphabet est codé comme un nombre
+l'ensemble \(\lbrace 1, \dots, K\rbrace\). On suppose qu'on dispose d'un
+message crypté de ce type:
+
+\begin{verbatim}
+[1] "NJNEFYJ OFXJFCJ 'EJ FCJAHE FCDFNHD YL"
+\end{verbatim}
+
+L'objectif est de décrypter ce message, et retrouver le message
+original, à savoir:
+
+\begin{verbatim}
+[1] "CECI SERA LE DERNIER DEVOIR DU COURS."
+\end{verbatim}
+
+en utilisant l'inférence bayésienne. Pour cela,
+
+\begin{itemize}
+\item
+  On suppose que le message est issue d'une langue connue, disons le
+  Français, dont on connaît certaines caractéristiques (décrites plus
+  bas).
+\item
+  On suppose que ce message est la transformation du vrai message par
+  une permutation \(f_*^{-1}\) des éléments de l'alphabet. Ainsi,
+  \(f_*^{-1}\) a envoyé chaque élément de la phrase initiale sur un
+  autre élément de l'alphabet (deux éléments identiques dans la phrase
+  de départ le sont encore dans la phrase d'arrivée). On recherche donc
+  la permutation \(f_*\) afin de décrypter le message. Cette inconnue
+  vit donc dans un espace discret à \(K!\) éléments.
+\item
+  Pour un message \(X\) et permutation \(f\) donnée, la vraisemblance
+  associée à \(f\) est donnée par
+  \[L(X\vert f) = \prod_{i, j =1}^K M(i, j)^{f_X(i, j)},\] où
+\item
+  \(M(i, j)\) est le nombre de transitions \(i \rightarrow j\) (pour
+  chaque élément i et j de l'alphabet) observées \emph{par ailleurs}
+  dans la langue Française.
+\item
+  \(f_X(i, j)\) est le nombre de transitions de \(i \rightarrow j\) dans
+  la décryption du message \(X\) par \(f\). Par exemple, pour si \(f\)
+  est l'identité, notre message précédent présente 2 transitions
+  \("C" \rightarrow "J"\), 0 transition \("A" \rightarrow "B"\), 3
+  transitions \("J" \rightarrow "~"\), 0 transition
+  \("J" \rightarrow "C"\), etc\ldots{}
+\end{itemize}
+
+On voit que cette fonction de vraisemblance est grande si la décryption
+de \(X\) par \(f\) présente une fréquence de transition conistante avec
+celle de la matrice \(M\), connue dans la langue française.
+
+\hypertarget{objectif}{%
+\subsection{Objectif}\label{objectif}}
+
+On veut obtenir une vision des décryptions possibles par inférence
+bayésienne. On suppose que la loi a priori de \(f\) est une loi uniforme
+sur l'ensemble des permutations possibles. Au vu d'un message \(X\), on
+cherche à obtenir des échantillons tirés selon la loi a posteriori de
+\(f\). Pour cela, vous implémenterez un algorithme de Metropolis
+Hastings dont la loi stationnaire sera donnée par cette loi a
+posteriori.
+
+\begin{itemize}
+\tightlist
+\item
+  C'est vous qui choisirez le(s) point(s) de départ de cet algorithme en
+  justifiant votre démarche.
+\item
+  De même, c'est vous qui choisirez le noyau de transition de
+  l'algorithme de Metropolis Hastings utilisé.
+\item
+  L'objectif est d'obtenir des tirages dans la loi a posteriori. Vous
+  présenterez plusieurs de ces tirages et vous en servirez pour essayer
+  de décrypter au mieux votre texte.
+\item
+  La démarche devra être décrite clairement et reproductible (donc vous
+  fournirez vos codes).
+\end{itemize}
+
+Afin de vous aider dans la démarche, vous pourrez la très complète
+référence: \emph{Decrypting Classical Cipher Text Using Markov Chain
+Monte Carlo} de Chen et Rosenthal.
+
+\hypertarget{duxe9tails-techniques}{%
+\subsection{Détails techniques}\label{duxe9tails-techniques}}
+
+L'alphabet considéré sera celui composé de toutes les lettres
+majuscules, sans accent, de la langue française, auxquelles s'ajouteront
+l'apostrophe ``''', la virgule ``,'', le point ``.'' et l'espace " ``.
+On indexera ces éléments de 1 (la lettre''A``) à 30 (l'espace'' ").
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Un alphabet à 30 éléments}
+\NormalTok{(my_alphabet <-}\StringTok{ }\KeywordTok{c}\NormalTok{(LETTERS, }\StringTok{"'"}\NormalTok{, }\StringTok{","}\NormalTok{, }\StringTok{"."}\NormalTok{, }\StringTok{" "}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+ [1] "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q"
+[18] "R" "S" "T" "U" "V" "W" "X" "Y" "Z" "'" "," "." " "
+\end{verbatim}
+
+La matrice \(M\) transmise sera donc une matrice 30 par 30, indexée de
+la même manière. Ainsi, \(M(5, 29)\) comptera le nombre de transitions
+observées dans mon texte modèle (écrit en Français) entre le ``E'' et le
+``.''.
+
+Fatalement, l'exercice voudra que vous manipuliez des chaînes de
+caractères avec \texttt{R}. Vous pourrez vous aider du package
+\texttt{stringr} pour lequel il existe de nombreux tutoriels (dont
+\href{https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html}{celui
+ci}).
+
+
+\end{document}

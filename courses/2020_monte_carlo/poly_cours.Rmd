@@ -1,0 +1,59 @@
+---
+title: "Méthodes de Monte Carlo pour l'inférence statistique"
+author: "Pierre Gloaguen"
+date: "Cours ENSTA, Avril 2020  "
+header-includes:
+  - \input{en_tete_Rmd.tex}
+output: 
+  pdf_document:
+    toc: yes
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE)
+```
+
+\newpage
+
+# Préambule {-}
+
+\input{preambule.tex}
+
+\newpage
+
+# Introduction
+
+\input{introduction.tex}
+
+\newpage
+
+# Méthodes de Monte Carlo
+
+\input{methodes_monte_carlo.tex}
+
+\newpage 
+
+# Simulation de variables aléatoires
+
+\input{simulation_variable_aleatoire.tex}
+
+\newpage
+
+# Inférence bayésienne
+
+```{r child= "chapitre_inference_bayesienne.Rmd"}
+```
+
+
+\newpage
+
+# Méthodes de Monte Carlo par chaîne de Markov
+
+\input{methodes_mcmc.tex}
+
+\newpage
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+

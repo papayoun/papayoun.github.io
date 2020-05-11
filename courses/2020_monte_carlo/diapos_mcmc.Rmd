@@ -1,0 +1,629 @@
+---
+title: "Méthodes de Monte Carlo par chaîne de Markov"
+author: "Pierre Gloaguen"
+date: "Avril 2020"
+output:
+  beamer_presentation: 
+    dev: cairo_pdf
+    includes:
+      in_header: diapos_headers.tex
+  ioslides_presentation: default
+fontsize: 9pt
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, message = F, cache = F}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE,
+                      cache = TRUE,
+                      fig.width =  7, 
+                      fig.height = 4)
+library(tidyverse)
+```
+
+```{r theme_set, cache = FALSE}
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 12, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+
+## Rappels des cours précédents
+
+- Méthodes de Monte Carlo pour le calcul d'espérances
+- Approche par simulation de vaariables aléatoires i.i.d.
+- Méthodes de simulation de loi (échantillons i.i.d.)
+- Inférence bayésienne, technique nécessitant des algos de simulations de lois
+
+## Modèle probit
+
+On veut simuler selon une loi $\pi(\theta \vert y_{1:n}, \mathbf{x}_{1:n})$ telle que:
+$$\pi(\theta \vert y_{1:n}, \mathbf{x}_{1:n}) \propto \text{e}^{-\frac{1}{8}\theta^T\theta}\prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}$$
+
+- Possible par acceptation rejet si $n$ n'est pas trop grand;
+- Ensuite, ne fonctionne plus **en pratique** (probabilité d'acceptation devient trop faible).
+- Nécessité de définir un autre algorithme.
+
+## Objectif du cours 
+
+- Présentation des méthodes de Monte Carlo par chaîne de Markov
+- Rappel sur les chaînes de Markov (définitions)
+- Théorème ergodique
+- Algorithme de Metropolis Hastings 
+- Algorithme de Gibbs
+
+# Rappel sur les chaînes de Markov
+
+## Chaîne de Markov (à espace d'états fini)
+
+Soit $X_0$ une variable aléatoire sur $\lbrace 1,\dots, K\rbrace$ de loi $\pi_0$.
+
+- La suite de variables aléatoires $(X_n)_{n\geq 0}$ à valeurs dans $\K =\lbrace 1,\dots, K\rbrace$ est une chaîne de Markov si pour tout $n\geq 1$ est pour tout suite $(k_0,\dots,k_n)$ d'éléments de $\K$, on a :
+
+$$\mathbb{P}\left( X_n = k_n \vert X_0 = k_0,\dots,X_{n- 1} = k_{n- 1}\right) = \mathbb{P}(X_n = k_n \vert X_{n-1} = k_{n-1})$$
+
+- Cette chaîne est $\textit{homogène}$ si, pour ($i, j$) dans $\K \times \K$: 
+ $\mathbb{P}(X_n = j \vert X_{n-1} = i) = \mathbb{P}(X_1 = j \vert X_{0} = i) = P_{ij}$
+- La matrice $P = (P_{ij})$ est la **matrice de transition** de la chaîne de Markov. 
+- Une chaîne de Markov homogène est entièrement caractérisée par $\pi_0$ et $P$.
+
+## Loi de la chaîne
+
+Pour $n \geq 0$, on note $\pi_n$,  la loi de l'état $X_n$, c'est à dire le vecteur ligne $$\pi_n = (\pi_{n,1} = \Pro(X_n = 1),\dots,\pi_{n, K} = \Pro(X_n = K)).$$
+On a:
+
+- $\Pro(X_1 = j) = \sum_{i = 1}^k \Pro(X_0 = i) \times \Pro(X_1 = j \vert X_0 = i) = \sum_{i = 1}^k \pi_{0,i}P_{ij}$ 
+Cette relation est résumée par l'équation $\pi_1 = \pi_0P$
+- Par récurrence, on montre que 
+$$P^{(n)}_{ij} := \Pro(X_n = j\vert X_0 = i) = (P^n)_{ij}$$ où $P^n$ est la puissance $n$-ième de la matrice $P$. 
+- Ainsi: $$\pi_n = \pi_0P^n$$
+
+## Mesure invariante pour $P$
+
+Soit $\pi$ un vecteur (ligne) de probabilité sur $\K$. 
+
+- $\pi$ est une **mesure invariante pour la chaîne de Markov de transition $P$** si:
+$$\pi P = \pi$$ 
+\pause
+
+- Si $\pi_0$ est une mesure invariante pour $P$, alors, pour tout $n$, $\pi_n = \pi_0$. 
+
+- Dans ce cas, les V.A. $X_0,\dots, X_n$ sont identiquement distribuées (mais pas indépendantes!).
+
+## Irréductibilité 
+
+Une chaîne de Markov homogène sur $\K$, de transition $P$ est **irréductible** si 
+$$\forall i,j \in \K\times \K,~\exists~n \text{ tel que } P^{(n)}_{i,j} > 0$$
+
+- Pour deux états de la chaîne, il est possible d'accéder de l'un à l'autre en un temps fini.
+
+## Apériodicité
+
+Soit $(X_n)_{n\geq 1}$ une chaîne de Markov homogène sur $\K$. Pour $k \in \K$, 
+
+- La *période* de l'état $k$, notée $d(k)$, est le P.G.C.D. de tous les entiers $n$ tels que $P^{(n)}_{kk} > 0$ (avec la convention $pgcd(\emptyset) = +\infty$):
+$$d(j) = pgcd\left\lbrace n\geq 1, P^{(n)}_{kk} > 0\right\rbrace$$
+Une chaîne est dite apériodique si pour tout $k$ dans $\K$, $d(k) = 1$.
+\pause 
+
+Pour une chaîne irréductible, une condition suffisante pour être apériodique est qu'il existe un $k\in \K$ tel que $P_{kk} > 0$.
+
+# Théorème ergodique
+
+## Théorème ergodique
+
+Soit $(X_n)_{n\geq 0}$ une chaîne de Markov sur $\K$ de loi initiale $\pi_0$ et de matrice de transition $P$. On suppose que cette chaîne est  irréductible et apériodique.
+Alors: \pause
+
+1. Cette chaîne de Markov admet une unique mesure de probabilité invariante $\pi$. \pause
+2. $X_n \overset{loi}{\longrightarrow} X$ où $X$ est une v.a. de loi $\pi$.\pause
+3. Pour toute fonction $\varphi$ intégrable par rapport à $\pi$, on a :
+$$\frac{1}{M + 1} \sum_{k = 0}^M \varphi(X_k) \underset{M \rightarrow +\infty}{\overset{p.s.}{\longrightarrow}} \mathbb{E}_\pi[\varphi(X)].$$
+\pause
+4. Si $\varphi(X)$ admet un moment d'ordre supérieur à 2, on a
+ $$\sqrt{M}\left( \frac{1}{M + 1}\sum_{k = 0}^n \varphi(X_k) - \mathbb{E}_\pi[\varphi(X)] \right) \underset{M \rightarrow +\infty}{\overset{Loi}{\longrightarrow}} \mathcal{N}(0, \sigma^2)$$
+
+\pause
+Une propriété analogue reste vraie quand la chaîne de Markov est à valeurs dans un ensemble continu (typiquement, $\R^d$). 
+
+## Conséquence et intérêt pratique du théorème ergodique
+
+- Pour estimer $\mathbb{E}_\pi[\varphi(X)]$, il suffit d'être capable de simuler une chaîne de Markov apériodique et irréductible de mesure de probabilité invariante $\pi$.\pause 
+- Il n'est pas nécessaire de savoir tirer selon $\pi$ directement! \pause
+- Le point 2. dit qu'*au bout d'un certain temps*, les $X_n$ simulés pourront être considérés comme de loi $\pi$ (mais pas indépendants!)! \pause
+- Encore faut il être capable de construire une chaîne de Markov apériodique, irréductible, de loi invariante donnée par $\pi$!\pause
+- $\longrightarrow$ Algorithme de Metropolis Hastings
+
+## Remarque sur le Théorème Central Limite 
+
+- Les V.A. dans l'estimateur Monte Carlo ne sont plus indépendantes.
+- $\Rightarrow$ la variance $\sigma^2$ n'est absolument pas triviale (il ne s'agit pas de $\V[\varphi(X)]$)!
+- Pas nécessairement facile à estimer!
+- Ainsi, avoir un IC asymptotique sur $\mathbb{E}_\pi[\varphi(X)]$ n'est plus du tout immediat.
+
+# Algorithme de Metropolis Hastings
+
+## Réversibilité
+
+Soit $\pi =(\pi_1,\dots, \pi_K)$ une mesure de probabilité sur $\K$ et $(X_n)_{n\geq 0}$ une chaîne de Markov homogène de matrice de transition $P$ et de loi initiale $\pi_0$.\pause 
+
+- $\pi$ est **réversible** pour $P$ si elle vérifie la condition d'équilibre:
+$$\forall (i, j) \in \K\times \K,~\pi_i \times P_{ij} = \pi_j \times P_{ji}$$
+
+- *Propriété:* Si $\pi$ est réversible pour une chaîne de Markov de transition $P$, alors, $\pi$ est une mesure de probabilité invariante pour $P$.\pause
+
+- *Preuve*
+Soit $\pi$ une mesure de probabilité réversible pour $P$. On a tout de suite que
+\begin{align*}
+\forall j \in \K~~(\pi P)_j & = \sum_{i = 1}^{K} \pi_i P_{ij}& \\
+&= \sum_{i = 1}^{K} \pi_j P_{ji} &\text{ par réversibilité}\\
+&= \pi_j &\text{ par propriété de } P\\
+\Rightarrow \pi P &= \pi&
+\end{align*}
+
+## Objectif de l'algorithme
+
+- On veut simuler selon la loi $\pi$.
+- Construire une chaîne de Markov irréductible et apériodique, de loi initiale $\pi_0$ et de transition $P$, **réversible
+pour P**
+- On va se servir pour ça d'une chaîne de Markov de transition $Q$ (réversible et apériodique) **parcourant le même espace que $P$** (le support de $\pi$).
+
+## Algorithme de Metropolis Hastings (formulation discrete)
+
+- Soit $Q$ une matrice stochastique $K \times K$ satisfaisant la condition suivante:
+$$\forall (i, j) \in \K\times \K, Q_{ij} > 0 \Leftrightarrow Q_{ji} > 0$$ 
+- Soit $(X_n)_{n\geq 0}$ la suite de variables aléatoires  construite ainsi:\pause
+
+1. On simule $X_0$ selon $\pi_0$.\pause
+2. Pour $n\geq 1$:
+  a. On tire $Y_n$ selon la loi $Q_{X_{n-1}\bullet}$ (la ligne de $Q$ donnée par $X_{n-1}$).\pause
+  b. On tire une loi uniforme $U$ indépendante de $Y_n$.\pause
+  c. On calcule la quantité 
+$$\alpha(X_{n-1}, Y_n) = \min\left(1, \frac{\pi_{Y_n}Q_{Y_n X_{n-1}}}{\pi_{X_{n - 1}}Q_{X_{n-1}Y_n}}\right)$$
+\pause
+  d. On pose:
+$$X_n = \left\lbrace
+\begin{array}{lr}
+Y_n & \text{ si } U\leq\alpha(X_{n-1}, Y_n)\\
+X_{n - 1} &\text{ sinon}
+\end{array}
+ \right.$$\pause
+ 
+- **Propriété 1:** $(X_n)_{n \geq 1}$ est une chaîne de Markov de transition $P$ où
+$$P_{ij} = Q_{ij}\alpha(i, j)  \text{ si } i\neq j,~~ P_{jj} = 1 - \sum_{j\neq i} P_{ij}$$
+- **Propriété 2:** De plus **$\pi$ est invariante pour $P$.**
+
+## Preuve
+
+### Matrice de transition $P$
+On veut montrer que:
+$$P_{ij} = Q_{ij}\alpha(i, j)  \text{ si } i\neq j,~~ P_{jj} = 1 - \sum_{j\neq i} P_{ij}$$
+\pause
+Soit $i\neq j$:
+\begin{align*}
+\Pro(X_{n} = j \vert X_{n -1} = i) &= \Pro\left(Y_{n} = j , U\leq \alpha(X_{n-1}, Y_{n})\vert X_{n -1} = i \right)\\
+&=  \Pro\left(Y_{n} = j , U\leq \alpha(i, j)\vert X_{n -1} = i \right)\\
+&=\Pro\left( U\leq \alpha(i, j)\vert X_{n -1} = i, Y_n = j \right)\Pro\left(Y_{n} = j \vert X_{n-1} = i\right)\\
+&= Q_{ij}\alpha(i,j)
+\end{align*}
+
+## Preuve que $\pi$ est mesure invariante
+
+Il suffit de montrer que $\pi$ est réversible pour $P$.
+
+Soient $i\neq j \in \K$:\pause 
+
+\begin{align*}
+\pi_iP_{ij} &=  \pi_i Q_{ij}\alpha(i, j)\\
+&= \pi_i Q_{ij} \min\left(1, \frac{\pi_{j}Q_{ji}}{\pi_{i}Q_{ij}}\right)\\
+&= \min\left(\pi_i Q_{ij}, \pi_{j}Q_{ji}\right)\\
+&= \pi_{j}Q_{ji}\min\left(\frac{\pi_i Q_{ij}}{ \pi_{j}Q_{ji}}, 1 \right)\\
+&= \pi_{j}Q_{ji}\alpha(j,i)\\
+&=\pi_{j}P_{ji}
+\end{align*}
+
+## Algorithme dans le cas continu
+
+Supposons qu'on veuille simuler dans $\R^d$ selon une densité $\pi$, éventuellement connue à une constante près, c'est à dire que 
+$$\forall x \in \R^d,~\pi(x) = \frac{\tilde{\pi}(x)}{\int_{\R^d}\tilde{\pi}(z)\rmd z}$$
+On remplace alors la matrice de transition par un $\textit{noyau de transition}$ sur $\R^d$, à savoir une fonction
+\begin{equation*}
+\begin{array}{lccc}
+q:& \R^d\times \R^d &\mapsto& \R_+\\
+& (x, y) & \mapsto & q(x, y)\geq 0
+\end{array}
+\end{equation*}
+telle que $\int_{\R^d}q(x, y)\rmd y = 1$ (typiquement, la loi d'une marche aléatoire centrée en $x$.\pause
+
+Si on sait simuler, pour $x$ fixé, selon $q$, et qu'on a $q(x, y) > 0 \Leftrightarrow q(y, x) > 0$, alors, l'algorithme de Metropolis reste valide en remplaçant $\pi$ par $\tilde{\pi}$ et $Q$ par $q$. \pause
+
+- Le ratio ne nécessite pas la constante de normalisation car 
+$$\frac{\tilde{\pi}(y)}{\tilde{\pi}(x)} = \frac{\pi(y)}{\pi(x)}$$
+
+# Exemple 2:  cas non conjugué
+
+## Exemple: Prédiction de présence d'oiseaux
+
+\includegraphics[width = 0.3\textwidth]{figures/linotte.jpeg}
+
+Une étude consiste en l'observation de la présence ou non de la linotte mélodieuse sur différents sites échantillonnés. 
+
+### Caractéristiques des sites
+
+Sur ces 300 sites sont mesurées différentes caractéristiques:
+
+- Le nombre de vers moyens sur une surface au sol de $1m^2$. (Covariable 1) 
+- La hauteur d'herbe moyenne sur une surface au sol de $1m^2$. (Covariable 2)
+- On calcule cette hauteur d'herbe au carré. (Covariable 3).
+
+## Données
+
+```{r donnees_presence, echo = F, message =F}
+library(tidyverse)
+rm(list = ls())
+set.seed(123)
+beta_vers <- 3; beta_herbe2 <- -1
+beta_0 <- 0.1 * beta_herbe2 ; 
+beta_herbe <- 2 * beta_herbe2 * beta_0
+beta_true <- c(beta_0, beta_vers, beta_herbe, beta_herbe2)
+n_site <- 300
+gen_y <- function(v, h, h2){
+  prob <- pnorm(beta_0 + v * beta_vers + h * beta_herbe + h2 * beta_herbe2)
+  factor(sample(0:1, size = 1, prob = c(1 - prob, prob)),
+         levels = c(0,1))
+}
+donnees_presence <- mixtools::rmvnorm(n_site, 
+                                mu = c(0, 0), 
+                                sigma = matrix(c(1, 0.5, 0.5, 1), ncol = 2)) %>% 
+  as.data.frame() %>% 
+  rename(dens_vers = V1, haut_herbe = V2) %>% 
+  mutate(haut_herbe_2 = haut_herbe^2) %>% 
+  rowwise() %>% 
+  mutate(presence = gen_y(dens_vers, haut_herbe, haut_herbe_2)) 
+```
+
+```{r plot_donnees_presence}
+ggplot(donnees_presence, aes(x = haut_herbe, y = dens_vers)) +
+  geom_point(aes(col = presence)) + 
+  labs(x = "Hauteur d'herbe", 
+       y = "Densité de vers", 
+       col = "Présence")
+```
+
+## Notations et modèle de régression probit
+
+On note $y_1, \dots, y_n$ les observations de présence (1 si on observe un oiseau, 0 sinon) sur les sites $1$ à $n$.
+
+On note 
+$$\mathbf{x}_k = (\overset{\text{Nb. vers}}{x_{k,1}}, \overset{\text{Haut. herbe}}{x_{k,2}}, \overset{\text{Haut. herbe}^2}{x_{k,3}})^T$$ le vecteur des covariables sur le $k$-ème site $(1\leq k \leq n)$.\pause
+
+On pose le modèle suivant:
+
+$Y_k \sim \mathcal{B}ern(p_k)$
+où 
+$$p_k = \phi(\beta_0 + \beta_1 x_{i1} + \beta_2x_{i2} + \beta_3 x_{i3}) = \phi(\mathbf{x}_k^T\theta),$$
+où 
+
+- $\phi$ est la fonction de répartition d'une $\mathcal{N}(0, 1)$, i.e.
+$$\phi(z) = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^z \text{e}^{-\frac{u^2}{2}}\text{d}u$$
+- $\theta = \left\lbrace \beta_0, \beta_1, \beta_2, \beta_3\right\rbrace$ est le vecteur des paramètres à estimer. 
+
+## Modèle Bayésien
+
+### Prior sur $\theta$
+
+Comme a priori sur $\theta$, on choisit une normale avec une grande variance$\theta \overset{\text{prior}}{\sim} \mathcal{N}(0, 4 I),$ donc 
+$$\pi(\theta) = \frac{1}{\sqrt{2\pi \times 4}^4} \text{e}^{-\frac{1}{8}\theta^T\theta}$$
+où $I$ est la matrice Identité (ici $4 \times 4$) \pause
+
+### Vraisemblance
+
+Pour un vecteur d'observations $y_{1:k}$, la vraisemblance
+$$L(y_{1:k}\vert \theta) = \prod_{k = 1}^n \underset{\text{Proba. présence}}{\phi(\mathbf{x}_k^T\theta)^{y_k}}\times \underset{\text{Proba. absence}}{(1 - \phi(\mathbf{x}_k^T\theta))}^{1 - y_k}$$
+\pause
+
+### Posterior
+
+Le posterior est donc donné par:
+$$\pi(\theta \vert y_{1:n}) \propto \pi(\theta) L(y_{1:n}\vert \theta) \propto \text{e}^{-\frac{1}{8}\theta^T\theta} \prod_{k = 1}^n \phi(\mathbf{x}_k^T\theta)^{y_k} (1 - \phi(\mathbf{x}_k^T\theta))^{1 - y_k}$$
+
+
+## Algorithme de Metropolis Hastings
+
+La loi stationnaire cible est $\pi(\mathbf{y}\vert \theta)$.
+Pour $n = `r n_site`$, l'acceptation rejet vu au cours précédent fonctionnera très mal en pratique. \pause
+
+On fait un algorithme de Metropolis Hastings avec comme loi de proposition une marche aléatoire dans $\mathbb{R}^4$, de matrice de covariance $\tau^2\times I_4$.
+
+```{r design_and_y_vector}
+design_matrix <- donnees_presence %>% 
+  select(-presence) %>%
+  as.matrix() %>% 
+  cbind(intercept = rep(1, nrow(.)), .)
+y_vector <- donnees_presence %>% 
+  pull(presence) %>% 
+  as.character() %>% 
+  as.numeric() 
+```
+
+```{r get_likelihood}
+get_likelihood <- function(beta_vec, X, y, log = FALSE){
+  phis <- pnorm(as.numeric(X %*% beta_vec), log.p = T)
+  log_likelihood <- rep(NA, nrow(X))
+  log_likelihood[y == 1] <- phis[y == 1]
+  log_likelihood[y == 0] <- log(1 - exp(phis[y == 0]))
+  if(log){
+    return(sum(log_likelihood))
+  }
+  else
+    return(exp(sum(log_likelihood)))
+}
+get_prior <- function(beta_vec, log = FALSE){
+  log_prior <- sum(dnorm(length(beta_vec), 0, 4, log = TRUE))
+  if(log){
+    return(log_prior)
+  }
+  else{
+    return(exp(log_prior))
+  }
+}
+```
+
+
+```{r get_posterior}
+get_posterior <- function(beta_vec, X, y, log = FALSE){
+  log_posterior <- get_prior(beta_vec, log = TRUE)  +
+    get_likelihood(beta_vec, X, y, log = TRUE)
+  if(log){
+    return(log_posterior)
+  }
+  else{
+    return(exp(log_posterior))
+  }
+}
+```
+
+```{r get_metropolis_sampling}
+get_metropolis_sampling <- function(beta_init, X, y, n_step, tau2 = 1){
+  beta_dim <- length(beta_init)
+  out <- matrix(ncol = beta_dim, nrow = n_step + 1, 
+                dimnames = list(NULL, paste0("beta_", 0:(beta_dim - 1))))
+  out[1, ] <- beta_init
+  my_tau <- sqrt(tau2)
+  accepted <- rep(NA, n_step + 1)
+  log_posterior <- rep(NA, n_step + 1)
+  log_posterior[1] <- get_posterior(beta_init, X, y, log = TRUE)
+  if(is.infinite(log_posterior[1])){
+    stop("First log posterior value is infinite, change beta_init")
+  }
+  for(i in 1:n_step){
+    candidate <- rnorm(beta_dim, out[i, ], my_tau)
+    candidate_log_posterior <- get_posterior(candidate, X, y, log = TRUE)
+    log_u <- log(runif(1))
+    accepted[i + 1] <- log_u < (candidate_log_posterior - log_posterior[i])
+    if (accepted[i + 1]) {
+      out[i + 1, ] <- candidate
+      log_posterior[i + 1] <- candidate_log_posterior
+    }
+    else {
+      out[i + 1, ] <- out[i, ]
+      log_posterior[i + 1] <- log_posterior[i]
+    }
+  }
+  tibble(iteration = 0:n_step) %>% 
+    bind_cols(as_tibble(out)) %>% 
+    mutate(log_posterior = log_posterior,
+           accepted = accepted,
+           tau2 = tau2) %>% 
+    return()
+}
+```
+
+## Résultat d'un algorithme lancé depuis un point de départ
+
+- On choisit $\beta^{(0)} = (0, 0, 0, 0)$ et $\tau^2 = 0.1$, on lance 1000 itérations.
+
+```{r premier_mcmc}
+premier_mcmc <- get_metropolis_sampling(rep(0, 4), design_matrix, y_vector, 
+                                        n_step = 1e3, tau2 = 0.1)
+```
+
+```{r plot_premier_mcmc}
+sample_plot <- select(premier_mcmc,  -log_posterior, -accepted, -tau2) %>% 
+  gather(-iteration, key = "Parametre", value = "Sample", factor_key = TRUE) %>% 
+  ggplot(aes(x = iteration, y = Sample, colour = Parametre)) +
+  geom_line() +
+  geom_point() +
+  labs(y = "Valeur échantillonnée", x = "Iteration", 
+       title = "Echantillons a posteriori") +
+  scale_color_discrete(labels = c(expression(beta[0]), expression(beta[1]),
+                                 expression(beta[2]), expression(beta[3])))
+log_posterior_plot <- ggplot(premier_mcmc) +
+  aes(x = iteration, y = log_posterior) +
+  geom_point() + 
+  geom_line() +
+  labs(y = expression("log"~tilde(pi)~"(x)"), x = "Iteration", 
+       title = "Valeur du log posterior")
+gridExtra::grid.arrange(sample_plot, log_posterior_plot)
+```
+
+## Sensibilité au point de départ
+
+Il faut toujours vérifié la sensibilité au point de départ!
+
+```{r mcmc_multiple_start}
+set.seed(123)
+mcmc_multiple_start <- rerun(5,
+                             get_metropolis_sampling(rnorm(4), 
+                                                     X = design_matrix, 
+                                                     y = y_vector, 
+                                                     n_step = 1e3, tau2 = 0.1)) %>% 
+  bind_rows(.id = "Replicate")
+```
+
+```{r plot_mcmc_multiple_start}
+sample_plot <- ggplot(mcmc_multiple_start) +
+  aes(x = iteration, y = beta_1, colour = Replicate) +
+  geom_line() +
+  geom_point() +
+  labs(y = "Valeur échantillonnée", x = "Iteration", 
+       title = expression("Echantillons de"~beta[1]~"pour différentes initialisations")) +
+  theme(legend.position = "none")
+log_posterior_plot <- ggplot(mcmc_multiple_start) +
+  aes(x = iteration, y = log_posterior, color = Replicate) +
+  geom_point() + 
+  geom_line() +
+  labs(y = expression("log"~tilde(pi)~"(x)"), x = "Iteration", 
+       title = "Valeur du log posterior pour différentes initialisations") +
+  theme(legend.position = "none")
+gridExtra::grid.arrange(sample_plot, log_posterior_plot)
+```
+
+## Influence de $\tau^2$
+
+```{r mcmc_multiple_tau}
+set.seed(123)
+mcmc_multiple_tau <- map_dfr(c(1e-3, 1e-2, 1e-1, 1),
+                               function(my_tau)
+                                 get_metropolis_sampling(rep(0, 4), 
+                                                         X = design_matrix, 
+                                                         y = y_vector, 
+                                                         n_step = 1e3, tau2 = my_tau))
+```
+
+```{r plot_mcmc_multiple_tau}
+sample_plot <- ggplot(mcmc_multiple_tau) +
+  aes(x = iteration, y = beta_1, colour = factor(tau2)) +
+  geom_line() +
+  geom_point() +
+  labs(y = "Valeur échantillonnée", x = "Iteration", 
+       title = expression("Echantillons de"~beta[1]~"pour différents"~tau^2),
+       color = expression(tau^2))
+log_posterior_plot <- ggplot(mcmc_multiple_tau) +
+  aes(x = iteration, y = log_posterior, color = factor(tau2)) +
+  geom_point() + 
+  geom_line() +
+  labs(y = expression("log"~tilde(pi)~"(x)"), x = "Iteration", 
+       title = expression("Valeur du log posterior pour différents"~tau^2),
+       color = expression(tau^2)) 
+gridExtra::grid.arrange(sample_plot, log_posterior_plot)
+```
+
+## Influence de $\tau^2$
+
+**Taux d'acceptation dans l'algorithme**
+
+```{r taux_acceptation}
+mcmc_multiple_tau %>% 
+  group_by(tau2) %>% 
+  summarise(taux_acceptation = mean(accepted, na.rm = TRUE)) %>% 
+  knitr::kable(col.names = c("$\\tau^2$", "Taux d'acceptation"))
+```
+
+\pause
+**Autocorrelation dans les chaînes**
+
+Correlation entre empirique entre $\beta_1^{n}$ et $\beta_1^{(n + 1)}$
+
+```{r autocorrelation}
+mcmc_multiple_tau %>% 
+  group_by(tau2) %>% 
+  summarise(autocorrel = cor(beta_1[-1], beta_1[-n()])) %>% 
+  knitr::kable(col.names = c("$\\tau^2$", "Autocorrelation"))
+```
+
+## Reduction de l'autocorrelation
+
+En pratique, on choisira une fracion des points. On appelle cela le **thinning**.\pause
+
+Autocorrélation en prenant un point sur 100.
+
+```{r mcmc_multiple_tau_thin}
+set.seed(123)
+mcmc_multiple_tau <- map_dfr(c(1e-3, 1e-2, 1e-1, 1),
+                             function(my_tau)
+                               get_metropolis_sampling(rep(0, 4), 
+                                                       X = design_matrix, 
+                                                       y = y_vector, 
+                                                       n_step = 1e4, tau2 = my_tau))
+mcmc_multiple_tau %>% 
+  filter((iteration %% 100) == 0) %>% 
+  group_by(tau2) %>% 
+  summarise(autocorrel = cor(beta_1[-1], beta_1[-n()])) %>% 
+  knitr::kable(col.names = c("$\\tau^2$", "Autocorrelation"))
+```
+
+## Estimation de la loi
+
+Les premières valeurs n'ont aucune raison d'être tirées selon la loi cible.
+
+En pratique, on les supprimera. On appelle cela le **burn-in**.\pause
+
+```{r plot_burned_thin, warning = FALSE, fig.height = 5}
+kept_sample_gathered <- mcmc_multiple_tau %>% 
+  filter((iteration %% 100) == 0, tau2 == 0.1) %>% 
+  mutate(burnin = ifelse(iteration <= 1e3, "burnt", "kept")) %>% 
+  select(-log_posterior, -accepted, -tau2) %>% 
+  gather(-iteration, -burnin, key = "Parametre", value = "Sample", factor_key = TRUE)
+sample_plot <- kept_sample_gathered %>% 
+  ggplot(aes(x = iteration, y = Sample, color = Parametre,
+             alpha = burnin)) +
+  geom_line() +
+  geom_point() + 
+  labs(y = "Valeur", x = "Itération", alpha = "",
+       title = "Echantillon conservé (thin + burnin)") +
+  scale_color_discrete(labels = c(expression(beta[0]), expression(beta[1]),
+                                 expression(beta[2]), expression(beta[3]))) +
+  scale_alpha_manual(values = c(0.3, 1))
+density_plot <- kept_sample_gathered %>% 
+  filter(burnin == "kept") %>% 
+  ggplot(aes(x = Sample)) +
+  geom_density(aes(fill = Parametre), alpha = 0.7) +
+  scale_fill_discrete(labels = c(expression(beta[0]), expression(beta[1]),
+                                 expression(beta[2]), expression(beta[3]))) +
+  stat_function(fun = function(x) dnorm(x, 0, 4)) +
+  labs(x = "Valeur", y = "Densité", title = "Loi a posteriori estimées") +
+  lims(x = c(-5, 5))
+gridExtra::grid.arrange(sample_plot, density_plot)
+```
+
+# Autres algorithmes MCMC
+
+## Echantillonneur de Gibbs
+
+- Utile quand $\theta$ est en grande dimension;
+- On suppose qu'on sait simuler selon les loi conditionnelles de $\theta$\pause
+
+- Soit $X$ un vecteur aléatoire en dimension $d$ $X = (X^{(1)},\dots, X^{(d)})$.
+- On note $X^{-(\ell)} =  (X^{(1)},\dots, X^{(\ell-1)}, X^{(\ell+1)}, X^{(d)})$, 
+- Si on  sait simuler la variable aléatoire $X^{(\ell)}\vert X^{(-\ell)}$,  l'algo est le suivant: 
+\begin{enumerate}
+\item Prendre $X_0 = (X_0^{(1)},\dots, X_0^{(d)})$ tiré selon une loi initiale.
+\item Pour $k \geq 1$:
+\begin{enumerate}
+\item Tirer $\ell$ uniformément dans $\lbrace1,\dots,d\rbrace$;
+\item Simuler $Y$ selon la loi $X^{(\ell)} \vert \lbrace X^{(-\ell)} = X_{k-1}^{(-\ell)} \rbrace$
+\item Poser $X_k = (X_{k - 1}^{(1)},\dots, X_{k-1}^{(\ell-1)}, Y, X_{k - 1}^{(\ell+1)}, X_{k-1}^{(d)})$
+\end{enumerate}
+\end{enumerate}
+
+## Propriété de l'échantillonneur de Gibbs
+
+- L'échantillonneur de Gibbs est équivalent à un algorithme de Metropolis Hastings où la quantité $\alpha$ est toujours égale à 1, 
+- C'est à dire un Metropolis Hastings où on n'accepte tous les candidats!
+- Algorithme utile dès que la simulation des lois conditionnelles est faisable. 
+- Si les lois conditionnelles induisent une matrice de transition (ou un noyau) de Markov irréductible et apériodique, alors le théorème ergodique s'applique.
+
+
+

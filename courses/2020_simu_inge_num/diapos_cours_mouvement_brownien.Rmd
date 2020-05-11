@@ -1,0 +1,559 @@
+---
+title: "Processus stochastiques et mouvement Brownien"
+subtitle: "Une introduction informelle"
+author: "Pierre Gloaguen"
+date: "30/03/2020"
+output: 
+  beamer_presentation:
+    dev: cairo_pdf
+    includes:
+      in_header: set_chunk_font_size.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, 
+                      cache = TRUE)
+library(tidyverse)
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 10, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+## Objectifs du cours
+
+- Initiation à la modélisation stochastique de séries temporelles;
+- Description de phénomènes dynamiques à l'aide des probabilités;\pause
+- Nécessité de décrire un aléa temporel:
+    - **Processus stochastiques**.\pause
+- Focalisation sur les modèles de dynamiques en temps continu.
+
+## Modèles d'équations différentielles
+
+On s'intéresse à une quantité $x(t)$ définie continument au cours du temps:
+
+- **Physique:** la position d'une particule
+- **Ecologie:** la taille d'une population, déplacement d'un individu
+- **Epidemiologie:** la proportion d'une population infect
+- **Finance:** la valeur d'une action\pause
+
+Un modèle d'EDO est donné par une fonction $f$ telle que $x(t)$ satisfait:
+$$\frac{\text{d}x}{\text{d}t}(t) = f(x(t), t),~x(0) = x_0$$
+La solution est une **fonction déterministe**:
+$$x(t) = x(0) + \int_0^t f(x(s), s)\text{d}s$$
+
+## Inclure la variabilité
+
+Il n'est pas réaliste de vouloir penser certains phénomènes de manière déterministe:, on voudrait inclure de l'aléa (ou bruit):
+
+$$\frac{\text{d}x}{\text{d}t}(t) = f(x(t), t, \text{Aléa}),~x(0) \sim \text{Aléa}$$
+
+- Quelle structure d'aléa utiliser pour décrire les séries temporelles continues? 
+    - Un processus particulier: **Le mouvement Brownien**.
+    - Cela aboutit aux modèles d'**équations différentielles stochastiques**.\pause
+
+### Objectif
+
+Découverte du mouvement Brownien et des équations différentielles stochastiques, et comment les simuler (avec le logiciel `R`).
+
+# Processus stochastiques
+    
+## Définition
+
+- Une collection de variables aléatoires indexées par le temps:
+    - Temps discret, aux temps $0, 1, \dots, n$, les V.A. $X(1), X(2),\dots, X(n)$.
+    - Temps continu, $t \in \mathbb{R}_+$, la trajectoire est noté $\lbrace X(t) \rbrace_{t \geq 0}$.
+- $X(t)$ prend valeurs dans $\mathbb{N}$, $\mathbb{Z}$, $\mathbb{R}$ ou $\mathbb{R}^d$.
+    
+## Exemple en temps discret (marche aléatoire):
+
+\begin{align*}
+X(t + 1) &= X(t) + \zeta_t,~X(0) = 0,~t = 0,1, \dots\\
+\zeta_t &\overset{\text{ind.}}{=} \left\lbrace
+\begin{array}{lr}
+1& \text{ avec proba. } \frac{1}{2}\\
+-1& \text{ avec proba. } \frac{1}{2}
+\end{array} \right.
+\end{align*}
+
+```{r simulate_random_walk}
+simulate_random_walk <- function(tF){
+  tF <- ceiling(tF)
+  times <- seq(0, tF, by = 1)
+  rw <- c(0, cumsum(2 * rbinom(tF, size = 1, prob = 0.5) - 1))
+  tibble(t = times, x_t = rw)
+}
+```
+
+```{r three_random_walks, fig.height = 2.5, fig.width = 5}
+set.seed(1234)
+rerun(3, simulate_random_walk(5)) %>% 
+  bind_rows(.id = "Replicate") %>% 
+  ggplot(aes(x = t, y = x_t)) +
+  geom_step(aes(color = Replicate), alpha = 0.5, linetype = 2) +
+  geom_point(aes(shape = Replicate, color = Replicate)) +
+  labs(x = "Temps", y = "X(t)",
+       title = "3 réalisations du processus") +
+  theme(legend.position = "none") 
+```
+
+## Exemple en temps discret (marche aléatoire):
+
+\begin{align*}
+X(t + 1) &= X(t) + \zeta(t),~X(0) = 0,~t = 0,1, \dots\\
+\zeta(t) &\overset{\text{ind.}}{=} \left\lbrace
+\begin{array}{lr}
+1& \text{ avec proba. } \frac{1}{2}\\
+-1& \text{ avec proba. } \frac{1}{2}
+\end{array} \right.
+\end{align*}
+
+```{r thousand_random_walks, fig.height = 2.5, fig.width = 5}
+set.seed(1234)
+n_sim_rw <- 1000
+all_random_walks <- rerun(n_sim_rw, simulate_random_walk(5)) %>% 
+  bind_rows(.id = "Replicate")
+final_counts <- filter(all_random_walks, t == 5) %>% 
+  group_by(t, x_t) %>% 
+  summarise(n_points = n())
+ggplot(all_random_walks, aes(x = t, y = x_t)) +
+  geom_step(aes(group = Replicate), alpha = 0.1, linetype = 2) +
+  geom_point(data = final_counts, mapping = aes(size = n_points)) +
+  labs(x = "Temps", y = "X(t)",
+       title = paste(n_sim_rw, "réalisations du processus")) +
+  theme(legend.position = "none") 
+```
+
+## Ex. en temps continu (Processus de poisson):
+
+- Instants de sauts $T_0 = 0, T_1, T_2,\dots$
+- Loi du temps entre deux sauts: $T_k - T_{k - 1} \sim \mathcal{E}xp(\lambda)$ 
+- Nombre de sauts jusqu'à l'instant $t$:
+$N(0) = 0,~N(t) = \sum_{k = 1}^\infty \mathbf{1}_{T_k \leq t}$
+
+```{r simulate_poisson_process}
+simulate_poisson_process <- function(tF, lambda){
+  times <- 0
+  current_time <- 0
+  stop_condition <- FALSE
+  while(!stop_condition){
+    next_time <- current_time + rexp(1, lambda)
+    times <- c(times, next_time)
+    stop_condition <- next_time >= tF
+    current_time <- next_time
+  }
+  n_times <- length(times)
+  times[n_times] <- tF
+  processus <- c(0:(n_times - 1))
+  if(current_time != tF){
+    processus[n_times] <- n_times - 2
+  }
+  tibble(t = times, n_t = processus)
+}
+```
+
+```{r three_poisson_processes, fig.height = 3, fig.width = 5}
+set.seed(1234)
+rerun(3, simulate_poisson_process(5, 1)) %>% 
+  bind_rows(.id = "Replicate") %>% 
+  ggplot(aes(x = t, y = n_t)) +
+  geom_step(aes(color = Replicate)) +
+  geom_point(aes(shape = Replicate, color = Replicate)) +
+  labs(x = "Temps", y = "N(t)",
+       title = "3 réalisations du processus",
+       subtitle = expression(lambda == 1)) +
+  theme(legend.position = "none") 
+```
+
+## Ex. en temps continu (Processus de poisson):
+
+- Instants de sauts $T_0 = 0, T_1, T_2,\dots$
+- Loi du temps entre deux sauts: $T_k - T_{k - 1} \sim \mathcal{E}xp(\lambda)$ 
+- Nombre de sauts jusqu'à l'instant $t$:
+$N(0) = 0,~N(t) = \sum_{k = 1}^\infty \mathbf{1}_{T_k \leq t}$
+
+```{r thousand_poisson_processes, fig.height = 3, fig.width = 5}
+set.seed(1234)
+n_sim_pp <- 200
+all_poisson_processes <- rerun(n_sim_pp, simulate_poisson_process(5, 1)) %>% 
+  bind_rows(.id = "Replicate")
+final_counts <- filter(all_poisson_processes, t == 5) %>% 
+  group_by(t, n_t) %>% 
+  summarise(n_points = n())
+ggplot(all_poisson_processes, aes(x = t, y = n_t)) +
+  geom_step(aes(group = Replicate), col = "gray") +
+  geom_point(data = final_counts, mapping = aes(size = n_points)) +
+  labs(x = "Temps", y = "N(t)",
+       title = paste(n_sim_pp, "réalisations du processus"),
+       subtitle = expression(lambda==1)) +
+  theme(legend.position = "none") 
+```
+
+## Processus Markovien
+
+*L'influence du passé se résume au dernier instant.*
+
+Un processus $\left\lbrace X(t) \right\rbrace_{t\geq 0}$ est Markovien si, pour toute suite de temps $t_1 < t_2 < \dot < t_n$, la loi de $X_{t_{n + 1}} \vert X_{t_1},\dots, X_{t_{n}}$ est égale à celle de $X_{t_{n + 1}} \vert X_{t_{n}}$.
+
+**Propriété: ** Un processus Markovien est **entièrement caractérisé** par:
+
+- La loi de $X(0)$: *la loi initiale*
+- La loi de $X_{t_{n + 1}} \vert X_{t_{n}}$: *la loi de transition*.\pause
+
+Si on connaît ces deux lois, on peut simuler le processus aux temps $t_0 = 0, t_1, \dots, t_n$
+
+- On simule $X(0)$ selon la loi initiale.
+- On simule selon $X(t_1) \vert X(0)$, puis $X(t_2)\vert X(t_1)$, etc...
+
+## Loi de transition
+
+- **Marche aléatoire**
+$$X_{t + 1} \vert X_{t} = \left\lbrace \begin{array}{lr}
+X_{t} + 1 & \text{ avec proba } \frac{1}{2}\\
+X_{t} - 1 & \text{ avec proba } \frac{1}{2}
+\end{array} \right.$$
+- **Processus de poisson** de paramètre $\lambda$:
+$$X_{t + \Delta} \vert X_{t} = X_t + \mathcal{P}oisson(\lambda\times\Delta)$$
+
+# Mouvement Brownien
+
+## Définition
+
+Un mouvement Brownien, noté $\left\lbrace B(s) \right\rbrace_{s \geq 0}$, est un processus stochastique défini en *temps continu* satisfaisant les hypothèses suivantes:
+
+1. $B(0) = 0$. \pause
+2. Les accroissements sont indépendants, c'est à dire, pour tous $0 \leq t_1 < t_2 < t_3$, les variables aléatoires $B(t_2) - B(t_1)$ et $B(t_3) - B_(t_2)$ sont indépendantes. \pause
+3. Les accroissements sont stationnaires, c'est à dire que, pour tout $t > 0$ et $h > 0$, la loi de la variable aléatoire $B(t + h)  - B(t)$ ne dépend que de $h$. \pause
+4. Pour tout $t > 0$, $B(t) \sim \mathcal{N}(0, t)$\pause
+
+**Remarque: ** Ne pas confondre $B(t)$: la variable aléatoire correspondant à la **valeur** du processus au temps $t$ et $\left\lbrace B(s) \right\rbrace_{0 \leq s \leq t}$: la collection (infinie et non dénombrable!) de V.A. correspondant à une **trajectoire** du processus jusqu'au temps $t$.
+
+## Propriétés 
+
+1. **Markov: **Le mouvement Brownien est un processus de Markov, c'est à dire que pour toute suite de temps $t_1 < \dots < t_n$, la loi de $B(t_n) \vert B(t_1), \dots, B(t_{n - 1})$ est égale à la loi de 
+$B(t_n) \vert B(t_{n-1})$.
+1. **Loi de transition: ** 
+$$B(t + \Delta)\vert B(t) \sim \mathcal{N}(B(t), \Delta).$$
+
+## Exemples de réalisations
+
+```{r simulate_brownian_cumsum}
+simulate_brownian <- function(times){ # Simulation times
+  n_points <- length(times) # Number of points
+  # We can simulate all increments at once, and do the cumulative sum
+  brownian <- c(0, cumsum(rnorm(n_points - 1, 0, sqrt(diff(times))))) # All in once!
+  # Format the output in a data.frame
+  output <- data.frame(t = times, b_t = brownian)
+  return(output)
+}
+```
+
+```{r three_brownians}
+set.seed(123)
+rerun(3, simulate_brownian(times = seq(0, 5, length = 1001))) %>% 
+  bind_rows(.id = "Replicate") %>% 
+  ggplot() +
+  aes(x = t, y = b_t) +
+  geom_line(aes(color = Replicate)) +
+  labs(x = "Temps", y = "B(t)", 
+       title = "3 réalisations d'un mouvement Brownien") +
+  theme(legend.position = "none")
+```
+
+## Exemples de réalisations
+
+```{r thousand_brownians}
+set.seed(123)
+n_sim_bm <- 1000
+tF <- 5
+all_brownians <- rerun(n_sim_bm, 
+                       simulate_brownian(times = seq(0, tF, length = 101))) %>% 
+  bind_rows(.id = "Replicate") 
+brownian_plot <- ggplot(all_brownians) +
+  aes(x = t, y = b_t) +
+  geom_line(aes(group = Replicate), alpha = 0.2) +
+  geom_point(data = filter(all_brownians, t == tF), size = 1) +
+  labs(x = "Temps", y = "B(t)", 
+       title = paste(n_sim_bm, "réalisations d'un mouvement Brownien")) +
+  stat_function(fun = function(x) 1.96 * sqrt(x), col = "red", linetype = 2) +
+  stat_function(fun = function(x) -1.96 * sqrt(x), col = "red", linetype = 2)
+ggExtra::ggMarginal(brownian_plot, margins = "y", 
+                    type = "densigram", fill = "#a6caef",
+                    col = "#6d89a6")
+```
+
+
+## Autres propriétés 
+
+On peut montrer que:
+
+- **Continuité** Chaque trajectoire du mouvement Brownien est presque sûrement continue.
+- **Non différentiabitlité** Le mouvement Brownien n'est dérivable en **aucun point** de sa trajectoire.\pause
+
+### Qualité comme modèle de bruit
+
+1. **Accroissements indépendants** Pas d'effet d'accumulation des déviations autour de la vraie courbe \pause
+1. **Accroissements stationnaires** Pas de période spécifique où les déviations autour de la vraie courbe sont plus importantes. 
+1. **Accroissements de loi Normale** Déviations contrôlées.
+
+# Equations différentielles stochastiques
+
+## Modèle de croissance malthusienne
+
+On considère une population de bactéries, partant d'une population $x_0$ et ayant un taux de reproduction $\alpha > 0$.
+
+- L'accroissement infinitésimal de la population est donné par une proportion $\alpha$ de la population existante;\pause
+- Au temps $t$, la taille de la population satisfait l'équation différentielle:
+$$\frac{\text{d}x}{\text{d}t}(t) = \alpha x(t),~x(0) = x_0$$
+La solution de cette équation est bien connue:
+$$x(t) = x_0\exp(\alpha t)$$
+
+## Ajout de l'aléa
+
+Dans l'environnement, il existe un aléa qui peut impacter l'accroissement infinitésimal, on a envie d'écrire:
+
+$$\frac{\text{d}X}{\text{d}t}(t) = \alpha X(t) + \text{Aléa},~X(0) = x_0$$
+
+La solution devient **aléatoire**, il s'agit d'un processus **stochastique**.\pause
+
+Cela peut se réécrire 
+$$X(t) = X(0) + \int_{0}^t \alpha X(s)\text{d}s + \text{Processus de perturbation}.$$
+\pause
+Ce processus de perturbation doit être modélisé. On choisira le **mouvement Brownien**.
+
+1. **Accroissements indépendants** Pas d'effet d'accumulation des déviations autour de la vraie courbe.
+1. **Accroissements stationnaires** Pas de période spécifique où les déviations autour de la vraie courbe sont plus importantes. 
+1. **Accroissements de loi Normale** Déviations contrôlées.
+
+## Equation différentielle stochastique
+
+On pose donc:
+$$X(t) = X(0) + \int_{0}^t \alpha X(s)\text{d}s + B(t).$$
+\pause
+Pour ne pas oublier l'accumulation de la perturbation,  on peut écrire:
+$$X(t) = X(0) + \int_{0}^t \alpha X(s)\text{d}s + \int_{0}^t \text{d}B(s).$$
+\pause
+En pratique, on trouvera toujours l'écriture infinitésimale:
+$$\text{d}X(t) = \alpha X(t) \text{d}t + \text{d}B(t),~X(0) = x_0$$
+
+- Cette dernière écriture définit une **équation différentielle stochastique**.
+- Sa solution est un **processus stochastique**.
+
+## Remarque fondamentale
+
+La solution de 
+$$\text{d}X(t) = \alpha X(t) \text{d}t + \text{d}B(t),~X(0) = x_0$$
+**n'est pas**
+$$X(t) = x_0\exp(\alpha t) + B(t).$$
+**et encore moins**
+$$X(t) = x_0\exp(\alpha t) + \varepsilon(t), ~\varepsilon(t) \overset{i.i.d.}{\sim} \mathcal{N}(0, \sigma^2)$$
+\pause
+
+- Pour trouver une solution exacte, on doit passer par **le calcul stochastique.**
+- En pratique, peu d'EDS ont une solution exacte (i.e. un processus dont la loi de transition est connue.)
+- On passera par la simulation pour résoudre les EDS.
+
+
+## Exemple (1)
+
+```{r simulate_growth_model}
+simulate_growth_model <- function(x0, times, alpha, sigma = 1, sde = F){
+  n_points <- length(times)
+  if(!sde){
+    solution <- x0 * exp(alpha * times)
+  }
+  if(sde){
+    solution <- rep(NA, n_points)
+    solution[1] <- x0
+    for(k in 2:n_points){
+      delta_t <- times[k] - times[k - 1]
+      moyenne <- solution[k - 1] * exp(alpha * delta_t)
+      variance <- 0.5 * sigma^2 / alpha * (exp(2 * alpha * delta_t) - 1)
+      solution[k] <- rnorm(1, moyenne, sqrt(variance))
+    }
+  }
+  tibble(t = times, 
+         x_t = solution,
+         sigma = sigma,
+         stoch = ifelse(sde, "EDS", "EDO")) 
+}
+```
+
+```{r three_growth_sde, cache = TRUE}
+sim_times <- seq(0, 10, length.out = 101)
+x0 <- 10
+alpha <- 0.1
+growth_sdes <- rerun(100,
+              simulate_growth_model(x0, alpha = alpha, times = sim_times, sde = T)) %>% 
+  bind_rows(.id = "Replicate") %>% 
+  bind_rows(mutate(simulate_growth_model(x0, alpha = alpha, times = sim_times, sde = F),
+                   Replicate = "EDO"))
+ggplot(growth_sdes, aes(x = t, y = x_t)) +
+  geom_path(aes(group = Replicate,
+                color = stoch)) + 
+  labs(x = "Temps", y = "X(t)",
+       title = expression(dX(t)==alpha~"X(t)dt"~"+"~"dB(t), "~alpha == 0.1),
+       color = "")
+```
+
+## Exemple (2), amplification de la perturbation
+
+On peut ajouter un paramètre d'importance de la perturbation $\sigma$.
+
+```{r growth_sdes_different_sigma, cache = TRUE}
+sim_times <- seq(0, 10, length.out = 101)
+x0 <- 10
+alpha <- 0.1
+purrr::map_dfr(
+  .x = c(0.1, 1, 5),
+  .f = function(sig){
+    rerun(20,
+          simulate_growth_model(x0, alpha = alpha, times = sim_times, sde = T, sigma = sig)) %>% 
+      bind_rows(.id = "Replicate")}) %>% 
+  bind_rows(purrr::map_dfr(
+    .x = c(0.1, 1, 5),
+    .f = function(sig) 
+      simulate_growth_model(x0, alpha = alpha, times = sim_times, sde = F, sigma = sig),
+    .id = "Replicate")) %>% 
+  mutate(sigma = paste("sigma == ", sigma)) %>% 
+  ggplot(aes(x = t, y = x_t)) +
+  geom_path(aes(group = interaction(stoch,Replicate),
+                color = stoch, alpha = stoch)) + 
+  scale_alpha_manual(values = c(1, 0.3)) +
+  facet_wrap(~sigma, labeller = label_parsed) +
+  scale_x_continuous(breaks = c(0, 5, 10)) +
+  labs(x = "Temps", y = "X(t)",
+       title = expression(dX(t)==alpha~"X(t)dt"~"+"~sigma~"dB(t), "~alpha == 0.1),
+       color = "", alpha = "")
+```
+
+## Complexification du modèle
+
+Pour éviter des possibles valeurs négatives, on veut que les perturbations soient faibles quand la population est petite, on pose:
+$$\text{d}X(t) = \alpha X(t) \text{d}t + \sigma X(t)\text{d}B(t),~X(0) = x_0$$
+\pause
+La solution est alors donnée par:
+$$X(t) = X(0) + \int_{0}^t \alpha X(s)\text{d}s + \int_{0}^t \sigma X(s) \text{d}B(s).$$
+\pause
+**Remarque: ** La dernière intégrale n'a pas un sens évident. Elle est proprement définie par le **calcul stochastique** (ou calcul d'Ito).
+
+## Exemple (3)
+
+```{r simulate_geometric_brownian, echo = FALSE}
+simulate_geometric_brownian <- function(x0, times, alpha, sigma, sde = T){
+  sim_sigma <- ifelse(sde, sigma, 0)
+  brownian <- simulate_brownian(times) %>% pull(b_t)
+  solution <- x0 * exp((alpha - 0.5 * sim_sigma^2) * times + sim_sigma * brownian)
+  tibble(t = times, 
+         x_t = solution,
+         sigma = sigma,
+         stoch = ifelse(sde, "EDS", "EDO")) 
+}
+```
+
+```{r plot_geometric_brownian, cache = TRUE}
+sim_times <- seq(0, 10, length.out = 101)
+x0 <- 10
+alpha <- 0.1
+purrr::map_dfr(
+  .x = c(0.1, 1, 5),
+  .f = function(sig){
+    rerun(20,
+          bind_rows(simulate_geometric_brownian(x0, alpha = alpha, times = sim_times, 
+                                      sde = T, sigma = sig),
+                    simulate_geometric_brownian(x0, alpha = alpha, times = sim_times, 
+                                                sde = F, sigma = sig))) %>% 
+      bind_rows(.id = "Replicate")}) %>% 
+  mutate(sigma = paste("sigma == ", sigma)) %>% 
+  ggplot(aes(x = t, y = x_t)) +
+  geom_path(aes(group = interaction(stoch,Replicate),
+                color = stoch, alpha = stoch)) + 
+  scale_alpha_manual(values = c(1, 0.3)) +
+  facet_wrap(~sigma, labeller = label_parsed, scales = "free_y") +
+  guides(alpha = guide_legend(override.aes = list(alpha = 1))) +
+  scale_x_continuous(breaks = c(0, 5, 10)) +
+  labs(x = "Temps", y = "X(t)",
+       title = expression(dX(t)==alpha~"X(t)dt"~"+"~sigma~"X(t)dB(t), "~alpha == 0.1),
+       color = "", alpha = "")
+```
+
+## Modèle générique d'équation différentielle stochastique
+
+De manière générique, une EDS s'écrit:
+$$\text{d}X(t) =f(X(t), t) \text{d}t +  g(X(t), t)\text{d}B(t),~X(0) \sim \chi_0$$
+
+- $\chi_0$ est la **distribution initiale**;
+- $f()$ est la **fonction de dérive** (*drift*);
+- $g()$ est la **fonction de diffusion**.\pause
+
+La solution est alors donnée par:
+$$X(t) = X(0) + \int_{0}^t f(X(s), s)\text{d}s + \int_{0}^t g(X(s), s) \text{d}B(s).$$
+
+## Loi de transtion et simulation
+
+Pour simuler, il faut connaître la loi de $X(t) \vert X(0)$;
+
+L'algorithme est alors:
+
+1. Tirer $X(0)$ selon la loi initiale $\chi_0$;
+2. Tirer $X(t)$ selon la loi de $X(t)\vert X(0)$.\pause
+
+Problème, pour la plupart des EDS, cette loi est **inconnue**!\pause
+On peut recourir à une **approximation**.
+
+## Approximation d'Euler
+
+La solution est donnée par:
+$$X(t) = X(0) + \int_{0}^t f(X(s), s)\text{d}s + \int_{0}^t g(X(s), s) \text{d}B(s).$$
+\pause
+Pour $h$ petit, on a:
+$$X(h) \approx X(0) + f(X(0), 0)\times h + g(X(0), 0) \times \overset{\sim \mathcal{N}(0, h)}{(B(h) - B(0))}$$
+\pause
+Donc, pour $h$ petit, on a une **approximation de la loi de transition**:
+$$X(h)\vert X(0) \overset{\approx}{\sim} \mathcal{N}\left(X(0) + f(X(0), 0)\times h, g(X(0), 0)^2\times h\right)$$
+Cettte approximation est appelée **schéma d'Euler**.
+
+## Pseudo algorithme
+$$\text{d}X(t) =f(X(t), t) \text{d}t +  g(X(t), t)\text{d}B(t),~X(0) \sim \chi_0$$
+On peut donc simuler à un vecteur de temps $(0, t_1 = h, t_2 = 2h, \dots, t_n = nh)$.
+
+1. **Initialisation:** On obtient $x_0$ en simulant selon $\chi_0$ (ou on le fixe);\pause
+2. **Itération:** Pour $k$ allant de 1 à $n$:
+    - On obtient $x_k$ en tirant dans une loi normale
+    $$\mathcal{N}\left(x_{k - 1} + f(x_{k-1}, t_{k-1})\times h, g(x_{k - 1}, t_{k-1})^2\times h\right)$$
+
+## Squelette de code de simulation en `R`
+
+$$\text{d}X(t) =f(X(t), t) \text{d}t +  g(X(t), t)\text{d}B(t),~X(0) \sim \chi_0$$
+```{r simulate_sde, eval = FALSE, echo = TRUE}
+# On suppose qu'on a déjà codé les fonctions f(x, t) et g(x, t) 
+# x0 a été obtenu (ou choisi) préalablement
+# times est le vecteur de temps auxquels on simule
+simulate_sde <- function(x0, times, ...){
+  n_points <- length(times) # Nombre de points de simulations
+  output <- rep(NA, n_points) # Initialisation du vecteur final
+  output[1] <- x0 # Initialisation
+  for(k in 2:n_points){ # Itération
+    h <- times[k] - times[k - 1] # Pas de temps (doit être petit!)
+    moyenne_euler <- output[k - 1] + # x
+      f(output[k - 1], times[k - 1]) * h # f(x, t) * h
+    variance_euler <- g(output[k - 1], times[k - 1])^2 * h 
+    output[k] <- rnorm(n = 1, # 1 simulation de loi normale
+                       mean = moyenne_euler, # Moyenne
+                       sd = sqrt(variance_euler) # Ecart-type
+                       )
+  }
+  return(output)
+}
+```
+

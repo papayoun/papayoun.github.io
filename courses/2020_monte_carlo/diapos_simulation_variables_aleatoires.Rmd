@@ -1,0 +1,576 @@
+---
+title: "Simulations de variables aléatoires"
+author: "Pierre Gloaguen"
+date: "07/04/2020"
+output:
+  beamer_presentation:
+    dev: cairo_pdf
+    includes:
+      in_header: diapos_headers.tex
+  slidy_presentation: default
+---
+
+
+```{r setup, include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE,
+                      cache = TRUE,
+                      fig.width =  7, 
+                      fig.height = 3)
+library(tidyverse)
+```
+
+
+```{r theme_set, cache = FALSE}
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 12, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+## Annonces:
+
+- Premier rendu pour le 13 Avril à midi (exo5 du TD1)
+- À faire en binome et à rendre sur Ecampus
+- TD sur échantillonnage préférentiel en ligne sur ma page.
+- Rendre l'exo 3 pour le 21 Avril au soir.
+
+## Rappel des précédents
+
+- Nécessité en statistiques d'évaluer des espérances;
+- Principes des méthodes de Monte Carlo:
+    - Classiques et échantillonnage préférentiel.
+- Approximation d'intégrales (espérances) par simulation de variables aléatoires.
+- Fonctionne grâce à la loi des grands nombres, IC grâce au TCL.\pause
+- Comment simule t'on ces lois?
+    - Lois usuelles implémentées dans `R` (ou autre...)
+    - Comment est ce fait?
+    - Pour des lois non usuelles, comment faire?
+    
+## Objectif du cours 
+
+- Comment simuler une loi uniforme continue avec un ordinateur?
+    - Générateurs pseudo aléatoires;
+- Comment simuler des lois génériques à partir de lois uniformes?
+    - Méthode d'inversion;
+- Comment simuler des lois non classique à partir de lois simulables?
+    - Méthode d'acceptation rejet.
+
+# Générateurs pseudo aléatoires
+
+## Simulation de variables aléatoires par ordinateur
+
+**Objectif: ** Simuler une suite de variables aléatoires $X_1, \dots, X_M$ telles qu'elles soient:
+
+  - Distribuées selon une même loi donnée:
+  - Mutuellement indépendantes.\pause
+
+- Une telle simulation est faite selon un algorithme **déterministe**;\pause
+- À l'heure actuelle, un ordinateur ne peut que **mimer l'aléa**;\pause
+- **Mimer l'aléa:** Pour un échantillon de loi donnée:
+    - Passer les tests statistiques usuels d'adéquations (test du $\chi^2$, test de Kolmogorov Smirnoff);
+    - Passer les tests d'indépendances usuels (test du $\chi^2$, test de corrélation linéaire, ...).
+    
+## Générateur de la loi uniforme $\mathcal{U}[0, 1]$
+
+- En pratique, la loi "atomique" est la loi $\mathcal{U}[0, 1]$;\pause
+- Si on sait simuler selon cette loi, par différentes méthodes on pourra se ramener aux autres.\pause
+- Nécessité d'un algorithme permettant de mimer un échantillon i.i.d. de loi $\mathcal{U}[0, 1]$.
+
+## Algorithme de congruence linéaire
+
+Algorithme basé sur 4 données initiales choisies par l'utilisateur:
+\begin{itemize}
+\item Un entier $m > 0$, appelé \textit{module};
+\item Un entier $0 < a < m$  appelé \textit{multiplicateur};
+\item Un entier $0 \leq c < m$ appelé \textit{incrément};
+\item Un entier $0 \leq x_0 < m$ appelé \textit{graine}.
+\end{itemize}\pause
+On créera alors une suite de nombres $x_1,\dots x_n$ en utilisant la relation de récurrence
+\begin{align*}
+x_k = (a x_{k-1} + c) \text{ modulo }m. 
+\end{align*}\pause
+On définit enfin les nombres $u_1,\dots,u_n$  dans l'intervalle $[0, 1]$: 
+$$u_k = \frac{x_k}{m},~1\leq k \leq n.$$
+
+## Algorithme de congruence linéaire
+
+```{r mon_algo, echo = TRUE, eval = FALSE}
+mon_runif <- function(n , a, m, c, x0){
+  echantillon <- rep(NA, n + 1)
+  # %% est l'opérateur modulo
+  x_vals[1] <- (x0 %% m) # Initialisation
+  for(k in 2:(n + 1)){ # Iteration 
+    x_vals[k] <- (a * x_vals[k - 1] + c) %% m 
+  }
+  u_vals <- x_vals / m # Mise entre 0 et 1
+  return(u_vals[-1])
+  # On ne retourne pas la graine
+}
+```
+
+## Choix de a, m, c, x0
+
+- À $x_0$ fixé, la séquence obtenue est **toujours la même**. 
+    - En pratique, elle n'est pas demandée à l'utilisateur, mais obtenue en interne. 
+    - Exemple: nombre de millisecondes (modulo $m$) écoulé depuis le 1er Janvier 1970.\pause
+- Doit couvrir "tout" [0, 1]:
+    - $\Rightarrow$ $m$ grand; \pause
+- La suite est nécessairement **périodique**!
+    - On veut une période "invisible" (mimer l'indépendance);
+    - $\Rightarrow$ $a$ grand **et** relativement premier à $m$.\pause
+- Considération algorithmiques sur le modulo. 
+- Voir références poly.
+
+## Choix important (distribution)
+
+```{r mon_runif}
+mon_runif <- function(n , a, m, c, x0){
+  # %% est l'opérateur modulo
+  x0 <- x0 %% m# On s'assure que x0 est bien plus petit que m
+  xs <- rep(x0, n + 1)# Suite des xs, on ne gardera que les n derniers
+  for(k in 2:(n+1)){
+    xs[k] <- (a * xs[k - 1] + c) %% m 
+  }
+  us <- xs / m # Mise entre 0 et 1
+  # Retour sous forme de data.frame, pratique pour les ggplot
+  tibble(n = 1:n, valeur = us[-1])# On ne retourne pas x0 / m
+}
+```
+
+3 jeux de paramètres (voir TD), donnant 3 suites de 10000 valeurs entre 0 et 1
+
+```{r exemples}
+parametres <- list(a = list(41358, 3, 101),# On stocke les différents paramètres
+                   m = list(2^31 - 1, 2^31 - 1, 2311))# dans une liste
+# On peut faire plusieurs traitements sans boucle dans R
+resultats <- purrr::pmap_dfr(parametres, # On applique à la liste des paramètres
+                             mon_runif, # La fonction
+                             n = 10000, c = 0, x0 = 17, # Les paramètres manquants
+                             .id = "numero")# On souhaite une colonne
+```
+
+```{r plot_histogrammes_empiriques}
+ggplot(resultats) +
+  aes(x = valeur) +
+  geom_histogram(aes(y = ..density..),
+                 fill = "lightblue", color = "blue", 
+                 breaks = seq(0, 1, length.out = 21)) +
+  facet_wrap(.~numero) +
+  labs(y = "Densité empirique", x = "U")
+```
+
+Au risque 5%, avec un test de Kolmogorov-Smirnoff, on rejette 
+
+- $H_0:$ Echantillon de loi uniforme $\mathcal{U}[0, 1]$
+
+seulement pour l'échantillon 3.
+
+## Choix important (indépendance)
+
+On regarde, pour les 3 échantillons, la valeur de $u_k$ en fonction de celle de $u_{k-1}$:
+```{r plot_autocorrelations_empiriques, warning = FALSE}
+ggplot(resultats) +
+  aes(x = valeur, y = lead(valeur)) +
+  geom_point(size = 0.5) +
+  facet_wrap(.~numero) +
+  labs(y = expression(u[k]), x = expression(u[k - 1]))
+```
+
+Il y a une forte autocorrélation empirique dans les deux derniers échantillons! 
+
+## Loi uniforme générique
+
+- Si on sait simuler $U\sim \mathcal{U}[0, 1]$, alors, pour $a < b \in \mathbb{R}$ 
+$$(b - a) U + a \sim \mathcal{U}[a, b]$$
+- Dans `R`, la simulation d'une loi uniforme est faite avec `runif`;
+- Dans la suite: on suppose qu'on sait simuler selon $\mathcal{U}[0, 1]$.
+
+# Méthode d'inversion
+
+## Rappel: Fonction de répartition
+
+Soit $X$ une variable aléatoire à valeurs réelles. Pour tout réel $x$, on appelle fonction de répartition de $X$ la fonction $F_X$:
+\begin{align*}
+\begin{array}{ccl}
+\R &\mapsto& [0, 1]\\
+x &\mapsto& F_X(x) = \mathbb{P}(X \leq x)
+\end{array}
+\end{align*}\pause
+Une fonction de répartition $F_X$ est caractérisée par les propriétés suivantes:
+\begin{enumerate}
+\item $F_X$ est partout continue à droite, i.e. pour tout $x\in \R$: $$\lim_{h \underset{>0}{\rightarrow} 0} F(x + h) = F(x)$$
+\item $F_X$ est croissante.
+\item $\lim_{x \rightarrow -\infty}F_X(x) = 0, \lim_{x \rightarrow +\infty}F_X(x) = 1$
+\end{enumerate}
+Ainsi, toute fonction $F$ sur $\R$ satisfaisant ces conditions est une fonction de répartition.
+
+## Exemple: Fonction de répartition
+
+\begin{figure}
+\centering
+\includegraphics[height = 0.7\textheight]{figures/fonction_repartition}
+\caption{\label{fig:fonc:rep} Exemples de fonction de répartition pour une variable aléatoire discrète (haut), continue (centre) ou avec atome (bas). Source \textit{Wikipedia}.}
+\end{figure}
+
+## Inverse généralisée de $F$ (fonction quantile)
+
+Soit $F$ une fonction de répartition, on appelle inverse généralisée de $F$, notée, $F^{-1}$ la fonction:
+\begin{align*}
+\begin{array}{ccl}
+]0, 1[&\mapsto& \R\\
+u &\mapsto& F^{-1}(u) = \inf\left\lbrace z \in \R \text{ tel que } F(z) \geq u \right\rbrace
+\end{array}
+\end{align*}
+Pour une variable aléatoire $X$, la fonction $F_X^{-1}$ est également appelée *fonction quantile* de la variable aléatoire $X$.
+On convient que $F_X^{-1}(0)$ et $F_X^{-1}(1)$ sont  la plus petite et la plus grande des valeurs du support de $X$ (éventuellement infinies).
+
+## Inverse généralisée
+
+**Remarque:** Dans le cas d'une fonction de répartition $F$ continue et strictement croissante sur $\R$, la fonction $F^{-1}$ est simplement l'inverse de $F$.
+
+## Méthode d'inversion
+
+Supposon qu'on ait une variable aléatoire $X$ dont on connait la  fonction de répartiion $F$, comment simuler $X$?\pause
+
+*Exemple:* $X\sim \mathcal{E}xp(\lambda)$:
+
+- **Densité:** $f(x) = \lambda\text{e}^{-\lambda x}\mathbf{1}_{x \geq 0}$
+\pause
+- **Fonction de répartition: ** $F(x) = \int_{-\infty}^x f(z)\text{d}z = (1 - \text{e}^{-\lambda x})\mathbf{1}_{x \geq 0}$
+\pause
+- **Inverse généralisée: ** $0<u<1,~F^{-1}(u) = -\frac{\ln (1-u)}{\lambda}$
+\pause
+
+**Méthode d'inversion** Soit $F$ une fonction de répartition. Soit $F^{-1}$ son inverse généralisée. Soit $U$ une variable aléatoire de loi uniforme sur $[0, 1]$, alors la variable aléatoire $$X := F^{-1}(U)$$ admet $F$ comme fonction de répartition.
+
+## Exemple de méthode d'inversion
+
+$$F^{-1}(u) = -\frac{\ln (1-u)}{\lambda}$$
+
+```{r mon_rexp, echo = TRUE}
+mon_rexp <- function(n, lambda){
+  # On simule selon une loi uniforme
+  us <- runif(n) # Echantillon IID U[0,1]
+  # On applique la fonction quantile a l'échantillon
+  - log(1 - us) / lambda
+}
+```
+
+## Exemple de méthode d'inversion
+
+$$F^{-1}(u) = -\frac{\ln (1-u)}{\lambda}$$
+
+```{r plot_mon_rexp, cache = TRUE}
+tibble(x = mon_rexp(1e4, 1)) %>% 
+  ggplot(aes(x = x)) +
+  geom_histogram(aes(y = ..density..),
+                 color = "blue", fill = "lightblue",
+                 breaks = seq(0, 12, by = 0.5)) +
+  stat_function(fun = dexp, color = "red") +
+  labs(x = "x", y = "Densité empirique",
+       title = expression("Echantillon de taille 10000, "~lambda==1))
+```
+
+## Preuve de la méthode d'inversion
+
+On veut montrer que, pour tout $x\in \R$, si $U\sim \mathcal{U}[0,1]$, alors
+\begin{align}
+\mathbb{P}(F^{-1}(U) \leq x) &= F(x).\nonumber \pause
+\intertext{Montrons tout d'abord que, pour tout $u \in ]0, 1[$}
+\forall x \in \R,F^{-1}(u) \leq x &\Leftrightarrow u \leq F(x). \label{eq:lemma:inv}
+\end{align}
+\pause
+En effet, si on y parvient, il restera à conclure en se servant de la définition d'une loi uniforme:
+$$\mathbb{P}(F^{-1}(U) \leq x) \overset{\text{par \eqref{eq:lemma:inv}}}{=} \mathbb{P}(U \leq F(x))  \overset{\text{car }U\sim\mathcal{U}[0,1]}= F(x).$$
+
+## Preuve de la méthode d'inversion
+
+Montrons d'abord que, pour tout $u \in ]0, 1[$
+\begin{align*}
+\forall x \in \R,F^{-1}(u) \leq x &\Rightarrow u \leq F(x).
+\end{align*}
+\pause
+\begin{itemize}
+\item[$\Rightarrow$] Soient $u \in ]0, 1[$ et $x\in \R$ tels que $F^{-1}(u) \leq x$. \newline
+Par croissance de $F$, on a donc:
+\begin{align*}
+F\left(F^{-1}(u)\right) &\leq F(x)
+\intertext{Or, en se souvenant que par définition}
+F^{-1}(u) &= \inf\left\lbrace z \in \R \text{ tel que } F(z) \geq u \right\rbrace,
+\intertext{on a donc directement}
+u&\leq  F\left(F^{-1}(u)\right) \leq F(x)
+\end{align*}
+\end{itemize}
+
+## Preuve de la méthode d'inversion
+
+Montrons maintenant, pour tout $u \in ]0, 1[$
+\begin{align*}
+\forall x \in \R,F^{-1}(u) \leq x &\Leftarrow u \leq F(x).
+\end{align*}\pause
+\begin{itemize}
+\item[$\Leftarrow$] Soient $u \in ]0, 1[$ et $x\in \R$ tels que $u \leq F(x)$.\newline
+Ainsi, $x\in\left\lbrace z \in \R \text{ tel que } F(z) \geq u \right\rbrace$, donc $F^{-1}(u) \leq x$.
+\end{itemize}
+
+## Intérêt de la méthode d'inversion
+
+Ainsi, pour une variable aléatoire à valeurs dans $\mathbb{R}$, on sait simuler si on connaît l'inverse généralisée de sa fonction de répartition.
+
+# Méthode d'acceptation rejet
+
+## Exemple motivant
+
+```{r get_f_density}
+get_f_density <- function(x){
+  sqrt(2 / pi) * exp(-x^2 * 0.5)
+}
+```
+
+```{r get_g_density}
+get_g_density <- function(x){
+  dexp(x, 1)
+}
+M <- sqrt(2 / pi) * exp(0.5)
+get_ratio <- function(x){
+  get_f_density(x) / (M * get_g_density(x))
+}
+```
+
+On veut simuler selon la densité $f(x) = \sqrt{\frac{2}{\pi}}\text{e}^{-\frac{x^2}{2}}\mathbf{1}_{x \geq 0}$.
+
+La fonction quantile n'a pas d'expression analytique. La méthode d'inversion ne peut être appliquée.\pause
+
+**Principe de la méthode d'acceptation rejet:** 
+
+- Simuler des *candidats* selon une autre loi qu'on sait simuler. \pause 
+- Choisir parmi les candidats grâce à la loi uniforme.
+
+## Méthode d'acceptation rejet (proposition)
+
+Soit $f$ et $g$ deux densités sur $\R^d$.
+On suppose qu'il existe une constante $M$ telle que 
+$$\forall x \in \R^d~~f(x) \leq M g(x)$$
+On note 
+$$0 \leq r(x) := \frac{f(x)}{Mg(x)} \leq 1.$$
+\pause
+-Soient $(Y_n)_{n\geq 1}$ une suite de variables aléatoires i.i.d. de densité $g$ et $(U_n)_{n\geq 1}$ une suite de variables aléatoires i.i.d. de loi uniforme sur $[0, 1]$. 
+\pause
+- On note $T$ la variable aléatoire (à valeurs dans $\mathbb{N}^*$):
+$$T = \inf\left\lbrace n, \text{ tel que } U_n \leq r(Y_n)\right\rbrace.$$.
+\pause
+- Alors, la variable aléatoire $X := Y_T$ ($T$-ième valeur de la suite  $(Y_n)_{n\geq 1}$) a pour densité $f$.
+
+## Méthode d'acceptation rejet (algorithme)
+
+On veut tirer un échantillon $X$ de densité $f$. 
+On ne sait simuler que selon la densité $g$.
+On suppose qu'il existe une constante $M$ telle que 
+$$\forall x \in \R^d~~f(x) \leq M g(x)$$
+
+**Algorithme** `Condition <- FALSE`
+
+- Tant que `not Condition`:
+    - Tirer $Y \sim g(y)$;
+    - Tirer (indépendemment) $U\sim \mathcal{U}[0, 1]$;
+    - Si $$U \leq \frac{f(Y)}{Mg(Y)},$$ alors on pose `Condition <- TRUE` et $X = Y$
+    - Sinon `Condition <- FALSE`
+
+En sortie, $X\sim f(x)$.
+
+## Méthode d'acceptation rejet: Exemple
+
+- On veut simuler selon $f(x) = \sqrt{\frac{2}{\pi}}\text{e}^{-\frac{x^2}{2}}\mathbf{1}_{x \geq 0}$
+- On considère $g(x) = \text{e}^{-x}\mathbf{1}_{x \geq 0}$ (densité d'un $\mathcal{E}xp(\lambda = 1) )$  
+- On montre que 
+$$\forall x \in \R,~f(x) \leq \overbrace{\sqrt{\frac{2}{\pi}} \text{e}^{\frac{1}{2}}}^Mg(x)$$
+
+```{r plot_function}
+functions_tibble <- tibble(x = seq(0, 8, length.out = 1001)) %>% 
+  mutate(f = get_f_density(x),
+         g = get_g_density(x),
+         Mg = M * g,
+         Ratio = get_ratio(x)) %>% 
+  gather(-x, key = "Fonction", value = "Valeur", factor_key = TRUE) 
+functions_tibble %>% 
+  ggplot(aes(x = x, y = Valeur, color = Fonction)) +
+  geom_line(size = 2, alpha = 0.8) +
+  labs(x = "x", y = "") +
+  scale_color_manual(values = c("darkgreen", "red", "orange", "purple"))
+```
+
+## Méthode d'acceptation rejet: Exemple
+
+```{r graphiques_points_acceptes}
+get_acceptation <- function(n){
+  candidates <- rexp(n)
+  tibble(x = candidates,
+         y = 0,
+         accepte = runif(n) < get_ratio(candidates)) %>% 
+    mutate(Fonction = ifelse(accepte, "f", "g"))
+}
+```
+
+- On simule 10000 points selon $g$
+
+```{r plot_simulated}
+set.seed(123)
+simulated_points <- get_acceptation(10000)
+functions_tibble %>%
+  filter(Fonction != "Mg") %>% 
+  ggplot(aes(x = x)) +
+  geom_line(aes(y = Valeur, color = Fonction)) +
+  labs(x = "x", y = "") +
+  scale_color_manual(values = c("darkgreen", "red", "purple")) +
+  geom_jitter(data = simulated_points, aes(y = y), color = "red",
+             size = 0.5, height = 0.01, alpha = 0.5)
+```
+
+## Méthode d'acceptation rejet: Exemple
+
+- On simule 10000 points selon $g$
+- On accepte avec une probabilité donnée par le ratio
+
+```{r plot_simulated_accepted}
+set.seed(123)
+simulated_points <- get_acceptation(10000)
+functions_tibble %>%
+  filter(Fonction != "Mg") %>% 
+  ggplot(aes(x = x)) +
+  geom_line(aes(y = Valeur, color = Fonction)) +
+  labs(x = "x", y = "") +
+  scale_color_manual(values = c("darkgreen", "red", "purple")) +
+  geom_jitter(data = simulated_points, aes(y = y, color = Fonction), 
+             size = 0.5,  height = 0.01, alpha = 0.5)
+```
+
+## Méthode d'acceptation rejet: Exemple
+
+- On simule 10000 points selon $g$
+- On accepte avec une probabilité donnée par le ratio
+- Les points acceptés sont i.i.d. de densité $f$.
+
+```{r plot_simulated_plus_histo}
+set.seed(123)
+simulated_points <- get_acceptation(10000)
+functions_tibble %>%
+  filter(Fonction == "f") %>% 
+  ggplot(aes(x = x)) +
+  geom_line(aes(y = Valeur, color = Fonction)) +
+  scale_color_manual(values = "darkgreen") +
+  labs(x = "x", y = "") +
+  geom_jitter(data = filter(simulated_points, accepte), 
+             aes(y = y), color = "darkgreen", 
+             size = 0.5,  height = 0.01, alpha = 0.5) +
+  geom_histogram(data = filter(simulated_points, accepte),
+                 breaks = seq(0, 8, by = 0.1),
+                 aes(y = ..density..), fill = "darkgreen", 
+                 alpha = 0.2,
+                 color = "darkgreen", linetype = 2)
+```
+
+## Remarque
+
+Sur l'exemple précédent, au lieu de faire un "tant que", on a simuler 10000 points et on n'a retenu que les acceptés. \pause
+
+- Proportion empirique acceptée: `r round(mean(simulated_points$accepte), 3)`
+- D'un autre côté, on a $1/M = `r round(1 / M, 3)`$ 
+
+## Preuve de la méthode d'acceptation rejet
+
+Preuve à connaître!
+
+- Voir le poly de cours.
+- Analogue de la preuve sera demandée en devoir.
+
+## Code R
+
+```{r get_one_sample, eval = FALSE, echo = TRUE}
+get_one_sample <- function(){
+  condition <- FALSE
+  while(!condition){
+    y <- simulate_g(...) # Simulation selon g
+    u <- runif(1) # Uniform
+    # On suppose que f, g, et M existent
+    condition <- u <= f(y) / (M * g(y))
+  }
+  return(y)
+}
+```
+
+
+## Loi du temps d'attente
+
+```{r get_f_sample}
+get_f_sample <- function(n_sample){
+  get_one_sample <- function(id){
+    condition <- FALSE
+    n_essai <- 0
+    while(!condition){
+      n_essai <- n_essai + 1
+      y <- rexp(1, 1) # Simulation selon g
+      u <- runif(1) # Uniform
+      # On suppose que f, g, et M existent
+      condition <- (u <= get_f_density(y) / (M * get_g_density(y)))
+    }
+    tibble(x = y, n_essai = n_essai, id = id)
+  }
+  parallel::mclapply(1:n_sample, get_one_sample,
+                     mc.cores = parallel::detectCores()) %>% 
+    bind_rows()
+}
+```
+
+```{r my_f_sample}
+my_f_sample <- get_f_sample(1e4)
+```
+
+On s'arrête au premier temps tel qu'une uniforme est inférieure au ratio observée.
+
+La loi du temps d'attente (voir preuve) est une **loi géométrique** sur $\mathbb{N}^*$ de paramètre $\frac{1}{M}$ .
+
+```{r plot_temps_attente}
+my_f_sample %>% 
+  group_by(n_essai) %>% 
+  summarise(Proportion = n() / 10000) %>% 
+  mutate(loi_temps = dgeom(n_essai - 1, 1/M)) %>% 
+  ggplot(aes(x = n_essai)) + 
+  geom_col(aes(y = Proportion), width = 0.1, fill = "blue") +
+  geom_point(aes(y = loi_temps), size = 2, col = "red") +
+  geom_line(aes(y = loi_temps), size = 1, col = "red") +
+  labs(x = "Nombre d'essais") +
+  geom_text(data = tibble(n_essai = 6, y = c(0.6, 0.5), 
+                          texte = c("Théorique", "Empirique")),
+            aes(y = y, label = texte, color = texte),
+            size = 6) +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_x_continuous(labels = 1:8, breaks = 1:8) +
+  theme(legend.position = "none")
+```
+
+## Vecteurs aléatoires
+
+Pour simuler un vecteur aléatoire $(X, Y)$, on pourra utiliser (voir poly et TD pour des exemples):
+
+- Conditionnement;
+- Changement de variables
+
+## Changements de variables pour densité
+
+Soit un couple de variables aléatoires $(U,V)$ de densité $f_{U,V}(u,v)$ définie sur $E_{UV} \subset \R^2$ et un couple de variables aléatoires $(X, Y)$ à valeurs dans $E_{XY} \subset \R^2$. Supposons qu'il existe une application $\phi$, $C^1$, inversible, et d'inverse $C^1$, tel que $(X, Y) = \phi(U, V)$, alors la densité jointe de $(X, Y)$ est donnée par:
+$$f_{X,Y}(x, y) = f_{U,V}(\phi^{-1}(x, y))\vert\det J_{\phi^{-1}}(x, y)\vert  $$
+où $J_\phi$ désigne la matrice jacobienne d'une application $\phi(u, v)$:
+$$J_\phi(u, v) = \begin{pmatrix}
+\frac{\delta \phi_1}{\delta u}(u, v) & \frac{\delta \phi_1}{\delta v}(u, v)\\
+\frac{\delta \phi_2}{\delta u}(u, v) & \frac{\delta \phi_2}{\delta v}(u, v)
+\end{pmatrix}$$

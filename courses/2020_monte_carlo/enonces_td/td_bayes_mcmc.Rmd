@@ -1,0 +1,270 @@
+---
+title: "Inférence bayésienne et méthodes MCMC"
+author: "Pierre Gloaguen"
+date: ""
+output:
+  pdf_document: 
+    number_sections: yes
+  html_notebook:
+    number_sections: yes
+    highlight: tango
+  html_document:
+    theme: united
+    highlight: tango
+    number_sections: yes
+subtitle: Travaux dirigés
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, comment = NA)
+```
+
+```{r cache = FALSE, message = FALSE}
+library(tidyverse)
+```
+
+
+# Inférence bayésienne pour le modèle linéaire
+
+Soit $Y$ un vecteur d'observations de $\mathbb{R}^n$, $\beta$ un vecteur de paramètres inconnus $\mathbb{R}^{p + 1}$  (tel que $n > p + 1$) et $X$ une matrice $n \times (p +1)$ telle que la matrice $X^T X$ soit inversible.
+On considère le modèle linéaire Gaussien:
+$$Y = X\beta + E$$
+où $E$ est un vecteur Gaussien de loi $\mathcal{N}(0, \sigma^2I_n)$.
+
+## Cas où $\sigma^2$ est connu
+
+1. Dans le cas où $\sigma^2$ est connu, écrire la vraisemblance associée au modèle précédent. Montrer que cette vraisemblance est proportionelle, en tant que densité de probabilité pour le vecteur $\beta$, à la densité d'un loi $\mathcal{N}((X^TX)^{-1}X^TY, \sigma^2 (X^TX)^{-1})$. En déduire la densité a posteriori sur $\beta$ pour une inférence bayésienne effectuée avec un prior impropre.
+
+## Cas où $\sigma^2$ est inconnu
+
+Dans ce cas, on pose comme loi a priori que le couple $(\beta, \sigma^2)$ suit une loi normale inverse Gamma de paramètres $\mu \in \mathbb{R}^{p +1}$, $V$ (une matrice de variance-covariance de taille $(p+1) \times (p+1)$, $a$ et $b$ (deux réels positifs).
+
+Formellement:
+$$\pi(\beta ,\sigma^{2}\vert \mu , \mathbf{V},a ,b )\propto
+\left({\frac {1}{\sigma ^{2}}}\right)^{\frac{p +1}{2}}\left({\frac {1}{\sigma ^{2}}}\right)^{a + 1}\exp \left(-\frac{b}{\sigma^2}\right)\exp \left(-{\frac {(\beta -\mu)^T\mathbf {V} ^{-1}(\beta - \mu)}{2\sigma ^{2}}}\right).$$
+**Remarque** Cette modélisation est en fait assez naturelle, elle correspond au cas où $\sigma^2$ suit une loi inverse $\mathcal{G}amma(a, b)$) (usuelle pour les variances) et $\beta \vert \sigma^2\sim \mathcal{N}(\mu, \sigma^2V)$.
+ 
+1. Montrer que la loi de $(\beta,\sigma^2)\vert Y, X$ suit également une loi Normale inverse Gamma dont vous préciserez les paramètres.
+
+2. Interprétez les paramètres en terme "d'apprentissage bayésien", c'est à dire en distinguant le poids du prior et des données.
+
+# Modèle probit avec covariables
+
+On reprend l'exemple vu en cours et dans l'exercice 5 du TD3 sur l'estimation de covariables corrélées à la présence d'oiseaux.
+
+## Notations et modèle
+
+On note $y_1, \dots, y_n$ les observations de présence (1 si on observe un oiseau, 0 sinon) sur les sites $1$ à $n$.
+
+On note $x_{ij}$ la valeur de la $j$-ème ($1\leq j \leq 3$) covariable sur le $i$-ème site.
+
+On suppose que les $y_1, \dots, y_n$ sont les réalisations de variables aléatoires
+$Y_1, \dots, Y_n$ telles que
+
+$Y_i \sim \mathcal{B}ern(p_i)$
+où 
+$$p_i = \phi(\beta_0 + \beta_1 x_{i1} + \beta_2x_{i2} + \beta_3 x_{i3}) = \phi(\mathbf{x}_i^T\theta)$$
+où $\theta = (\beta_0,\dots,  \beta_3)^T$ et $\phi$ la fonction de répartition d'une $\mathcal{N}(0, 1)$.
+L'objectif est d'estimer le vecteur $\theta$ dans un cadre bayésien.
+
+### Vraisemblance et posterior
+
+1. Rappelez l'expression de la vraisemblance d'un paramètre $\theta$ pour vecteur d'observations $\mathbf{y}$ ainsi que l'expression du posterior associée à un prior $\mathcal{N}(0, 4I_4)$.
+
+## Algorithme de Metropolis Hastings
+
+2. On se propose d'approcher  la loi *a posteriori* en utilisant un algorithme MCMC. Plus précisemment, on se propose de générer une chaîne de Markov $(\theta_n)_{n\geq 0}$ dont l'unique loi stationnaire est le posterior défini plus haut. Pour cela, on utilisera un algorithme de Metropolis Hastings dont le noyau de transition est une marche aléatoire de loi normale $\mathcal{N}(0, \sigma^2 I_4)$ où $I_4$ est la matrice identité $4\times 4$.
+Définir l'algorithme de Metropolis Hastings pour un jeu de données $\mathbf{y}$.
+
+3. Le fichier `donnees_presence_complet.txt` contient les observations de 300 sites sur lesquels la présence d'oiseaux a été constatée, ainsi que différentes variables environnementales mesurées.
+Ecrire un programme `R` codant l'algorithme de Metropolis Hastings précédent pour ce jeu de données. Vous testerez plusieurs valeurs de $\sigma^2$ pour la variance de la marche aléatoire, et choisirez celle qui vous semble la meilleure.
+
+4. Pour le $\sigma^2$ choisi quelle est la probabilité d'acceptation empirique?
+
+5. Quelle est la valeur réalisée de l'estimateur Bayésien $\mathbb{E}[\theta \vert \mathbf{Y}]$?
+
+6. Donner un intervalle de crédibilité pour chacun des paramètres.
+
+# Metropolis Hastings et loi de mélange
+
+```{r my_shift}
+shift <- 4
+```
+
+On s'intéresse à simuler à la loi d'un mélange de deux Gaussiennes:
+$$f(x) = \frac{1}{2} f_Z(x - `r shift`) + \frac{1}{2}f_Z(x + `r shift`)$$
+
+où $f_Z$ est la densité d'une loi $\mathcal{N}(0, 1)$.
+
+1. À l'aide du logiciel `R`, tracez la densité de cette loi.
+
+2. On se propose de construire un algorithme de Metropolis Hastings pour simuler une chaîne de Markov de loi stationnaire $f$ à partir d'une marche aléatoire d'étendue uniforme.
+Plus précisemment, pour $\alpha \in \mathbb{R}^*_+$, à partir d'une position $X = x$, on définit la prochaine position $Y\vert X = x$ comme une variable aléatoire de densité 
+$$q_\alpha(x, y) = \mathbf{1}_{x - \alpha \leq y \leq x + \alpha}$$
+    a. Ecrire un code `R` permettant de simuler selon cette loi.
+    b. Justifier que pour toute régions $A$ et $B$ de $\mathbb{R}$, on peut accéder de $A$ à $B$ en un nombre fini de pas.
+
+3. Définir l'algorithme de Métropolis Hastings pour simuler une chaîne de Markov $(X_n)_{n\geq 0}$, de loi stationnaire $f$  partir du noyau de Markov $q_\alpha$ et d'un point de départ $x_0$.
+
+4. Implémentez cet algorithme en `R` pour $\alpha = 0.01$ à partir de $x_0 = 0$, pour $n = 5000$. Faites tourner cet algorithme plusieurs fois, que constatez vous?
+
+5. Implémentez cet algorithme en `R` pour $\alpha = 5$ et à partir de $x_0 = -10$. Faites tourner cet algorithme plusieurs fois, que constatez vous?
+
+6. Dans les deux cas, donnez la probabilité d'acceptation empirique de l'algorithme (ou le nombre d'essai moyen avant de faire un pas dans la chaîne).
+
+# Echantillonneur de Gibbs
+
+*Cet exercice est un exemple trivial d'implémentation (inutile ici!) de l'échantillonneur de Gibbs*
+
+On veut simuler par échantillonneur de Gibbs un échantillon de vecteur aléatoire (X, Y) distribué selon la loi  $\mathcal{N}\left(0, \begin{pmatrix} 1 & \rho\\ \rho& 1\end{pmatrix}\right)$.
+
+1. Donnez la loi conditionnelle de $Y\vert X$ et $X \vert Y$.
+
+2. Implémentez un échantillonneur de Gibbs partant du point (10, 10) pour simuler selon la loi jointe de $(X, Y)$.
+
+3. *Burn-in:* Vérifiez empiriquement que l'algorithme converge vers la loi voulue. Quelle partie initiale de la chaîne simulée conseillez vous d'omettre?
+
+4. *Thinning:* Regardez la fonction d'autocorrélation de l'échantillon simulé. Quelle proportion de l'échantillon préconisez vous de gardez en pratique poour avoir un échantillon qu'on pourra supposer indépendant?
+
+<!-- Dans cet exercice, nous souhaitons montrer que l'échantillonneur de Gibbs définit en cours peut être vu comme un algorithme de Metropolis Hastings où le ratio d'acceptation est de 1. -->
+
+<!-- On cherche à simuler selon une variable aléatoire $X = (X^{(1)}, \dots, X^{(d)})$, de densité $p$ en dimension $d$ à partir d'un échantillonneur de Gibbs.  -->
+
+<!-- On note $X^{(-\ell)}$ le vecteur aléatoire de dimension $d - 1$: -->
+<!-- $$X^{(-\ell)} = (X^{(1)}, \dots,  X^{(\ell - 1)}, X^{(\ell + 1)}, \dots, X^{(d)})$$ -->
+<!-- On suppose que pour tout $1\leq \ell\leq d$, on sait simuler selon la loi conditionnelle $X^{(\ell)}\vert X^{(-\ell)}$. On suppose que cette loi admet une densité $p^{(\ell\vert-\ell)}$ -->
+
+<!-- L'algorithme de $Gibbs$ est le suivant: -->
+
+<!-- \begin{enumerate} -->
+<!-- \item[-] Prendre $X_0 = (X_0^{(1)},\dots, X_0^{(d)})$ tiré selon une loi initiale. -->
+<!-- \item[-] Pour $k \geq 1$: -->
+<!-- \begin{enumerate} -->
+<!-- \item Tirer $\ell$ uniformément dans $\lbrace1,\dots,d\rbrace$; -->
+<!-- \item Simuler $Y$ selon la loi $X^{(\ell)} \vert \lbrace X^{(-\ell)} = X_{k-1}^{(-\ell)} \rbrace$ -->
+<!-- \item Poser $X_k = (X_{k - 1}^{(1)},\dots, X_{k-1}^{(\ell-1)}, Y, X_{k - 1}^{(\ell+1)}, X_{k-1}^{(d)})$ -->
+<!-- \end{enumerate} -->
+<!-- \end{enumerate} -->
+
+<!-- 1. Pour un vecteur $x \in \mathbb{R}^d$ et un vecteur $y\in \mathbb{R}^d$, écrire le noyau de Markov $q(x, y)$ donné par les points $a), b)$ et $c)$ de l'algorithme en fonction de la densité $p^{(\ell\vert-\ell)}$ -->
+
+<!-- 2. En déduire une expression de $q(x, y)$ en fonction de la loi jointe de $x$ et $y$, et de la loi jointe $p^{-(\ell)}$ (la loi jointe du vecteur aléatoire $X^{(-\ell)}$) -->
+
+<!-- 3. Ecrire l'algorithme de Metropolis Hastings associé à ce noyau de Markov $q(x, y)$. Déduire des questions précédentes que le ratio d'acceptation de cet algorithme est de 1. -->
+
+# Décryptage bayésien
+
+```{r fonction_utiles, echo = FALSE}
+my_alphabet <- c(LETTERS, "'", ",", ".", " ")
+
+get_formatted_text <- function(input_text_) {
+  # Remove break lines
+  output_text <- str_replace(input_text_, "\n" , " ") %>% 
+    str_replace("\r" , " ") %>%
+    str_replace_all("[0123456789]", " ") %>% 
+    str_replace_all("[(;:)]", ", ") %>% 
+    str_replace_all("[!?]", ". ") %>% 
+    str_replace_all("[+]", " ") %>% 
+    stringi::stri_trans_general("Latin-ASCII") %>% 
+    toupper() %>% 
+    str_replace_all("[^ABCDEFGHIJKLMNOPQRSTUVWXYZ',. ]", " ") %>% 
+    str_replace(" ,", ",") %>% 
+    str_replace(" [[.]]", ".") %>% 
+    str_replace("[[.]],", ".") %>% 
+    str_replace(",,", ", ") %>% 
+    str_squish() %>% 
+    str_trim() %>% 
+    return()
+}
+```
+
+```{r get_f_decryption}
+get_f_decryption <- function(text_, f_permutation_, alphabet_){
+  if(length(f_permutation_) != length(alphabet_)){
+    stop("alphabet_ must a vector of same size as permutation_")
+  }
+  characters_vector <- str_extract_all(text_, boundary("character")) %>% unlist()
+  map_chr(characters_vector, 
+          function(char){
+            start_index <- which(alphabet_ == char)
+            alphabet_[f_permutation_[start_index]]
+          }) %>% 
+    paste(collapse = "")
+}
+set.seed(123)
+my_permutation <- sample(1:length(my_alphabet), replace = FALSE)
+my_permutation_inv <- purrr::map_dbl(1:length(my_alphabet),
+                              function(char){
+                                which(my_permutation == char)
+                              })
+my_true_text <- "Ceci sera le dernier devoir du cours." %>% 
+  get_formatted_text()
+my_encrypted_text <- get_f_decryption(my_true_text, my_permutation,
+                                      my_alphabet)
+get_f_decryption(my_encrypted_text, my_permutation_inv, my_alphabet)
+```
+
+
+
+## Présentation du problème
+
+On se place dans le cadre où on dispose d'un alphabet de taille finie, disons $K$.
+Chaque élément de l'alphabet est codé comme un nombre l'ensemble $\lbrace 1, \dots, K\rbrace$.
+On suppose qu'on dispose d'un message crypté de ce type:
+
+```{r print_encrypted_text, echo = FALSE}
+my_encrypted_text
+```
+
+L'objectif est de décrypter ce message, et retrouver le message original, à savoir:
+
+```{r print_true_text, echo = FALSE}
+get_f_decryption(my_encrypted_text, my_permutation_inv, my_alphabet)
+```
+
+
+en utilisant l'inférence bayésienne. Pour cela, 
+
+- On suppose que le message est issue d'une langue connue, disons le Français, dont on connaît certaines caractéristiques (décrites plus bas).
+- On suppose que ce message est la transformation du vrai message par une permutation $f_*^{-1}$ des éléments de l'alphabet. Ainsi, $f_*^{-1}$ a envoyé chaque élément de la phrase initiale sur un autre élément de l'alphabet (deux éléments identiques dans la phrase de départ le sont encore dans la phrase d'arrivée). 
+On recherche donc la permutation $f_*$ afin de décrypter le message. Cette inconnue vit donc dans un espace discret à $K!$ éléments.
+
+- Pour un message $X$ et permutation $f$ donnée, la vraisemblance associée à $f$ est donnée par
+$$L(X\vert f) = \prod_{i, j =1}^K M(i, j)^{f_X(i, j)},$$
+où 
+
+- $M(i, j)$ est le nombre de transitions $i \rightarrow j$ (pour chaque élément i et j de l'alphabet) observées *par ailleurs* dans la langue Française. 
+- $f_X(i, j)$ est le nombre de  transitions de $i \rightarrow j$ dans la décryption du message $X$ par $f$. Par exemple, pour si $f$ est l'identité, notre message précédent présente 2 transitions $"C" \rightarrow "J"$, 0 transition $"A" \rightarrow "B"$, 3 transitions $"J" \rightarrow "~"$, 0 transition $"J" \rightarrow "C"$, etc...
+
+On voit que cette fonction de vraisemblance est grande si la décryption de $X$ par $f$ présente une fréquence de transition conistante avec celle de la matrice $M$, connue dans la langue française.
+
+## Objectif
+
+On veut obtenir une vision des décryptions possibles par inférence bayésienne. 
+On suppose que la loi a priori de $f$ est une loi uniforme sur l'ensemble des permutations possibles. 
+Au vu d'un message $X$, on cherche à obtenir des échantillons tirés selon la loi a posteriori de $f$. 
+Pour cela, vous implémenterez un algorithme de Metropolis Hastings dont la loi stationnaire sera donnée par cette loi a posteriori.
+
+- C'est vous qui choisirez le(s) point(s) de départ de cet algorithme en justifiant votre démarche. 
+- De même, c'est vous qui choisirez le noyau de transition de l'algorithme de Metropolis Hastings utilisé.
+- L'objectif est d'obtenir des tirages dans la loi a posteriori. Vous présenterez plusieurs de ces tirages et vous en servirez pour essayer de décrypter au mieux votre texte.
+- La démarche devra être décrite clairement et reproductible (donc vous fournirez vos codes).
+
+Afin de vous aider dans la démarche, vous pourrez la très complète référence:
+*Decrypting Classical Cipher Text Using Markov Chain Monte Carlo* de Chen et Rosenthal.
+
+## Détails techniques
+
+L'alphabet considéré sera celui composé de toutes les lettres majuscules, sans accent, de la langue française, auxquelles s'ajouteront l'apostrophe "'", la virgule ",", le point "." et l'espace " ". On indexera ces éléments de 1 (la lettre "A") à 30 (l'espace " ").
+
+```{r my_alphabet, comment = NA, echo = TRUE}
+# Un alphabet à 30 éléments
+(my_alphabet <- c(LETTERS, "'", ",", ".", " "))
+```
+
+La matrice $M$ transmise sera donc une matrice 30 par 30, indexée de la même manière.
+Ainsi, $M(5, 29)$ comptera le nombre de transitions observées dans mon texte modèle (écrit en Français) entre le "E" et le ".".
+
+Fatalement, l'exercice voudra que vous manipuliez des chaînes de caractères avec `R`.
+Vous pourrez vous aider du package `stringr` pour lequel il existe de nombreux tutoriels (dont [celui ci](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)).
+

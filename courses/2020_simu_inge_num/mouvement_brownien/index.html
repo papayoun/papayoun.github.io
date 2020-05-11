@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="generator" content="Source Themes Academic 4.7.0">
+
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+  
+  
+
+  <meta name="author" content="Pierre Gloaguen">
+
+  
+  
+  
+    
+  
+  <meta name="description" content="Rappel des propriétés du mouvement Brownien Pour simuler un mouvement Brownien \(\lbrace B(t) \rbrace_{t \geq 0}\), on se rappellera que le mouvement Brownien est un processus de Markov en temps continu tel que:
+Initialisation: B(0) = 0 Loi de transition: Pour touts temps \(t_2 &gt; t_1\), \(B(t_2) \vert B(t_1) \sim \mathcal{N}(B(t_1), t_2 - t_1)\)   Simulation avec R library(tidyverse) # library(ggplot2); library(purrr); library(dplyr) # are enough if tidyverse doesn&#39;t work Nous allons maintenant coder en R une fonction qui permet de simuler une trajectoire d’un mouvement Brownien à un vecteur de temps fixés:">
+
+  
+  <link rel="alternate" hreflang="en-us" href="../../../courses/2020_simu_inge_num/mouvement_brownien/">
+
+  
+
+
+  
+  
+  
+  <meta name="theme-color" content="#3f51b5">
+  
+
+  
+  
+  
+  <script src="../../../js/mathjax-config.js"></script>
+  
+
+  
+  
+  
+  
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.8.6/css/academicons.min.css" integrity="sha256-uFVgMKfistnJAfoCUQigIl+JfUaP47GrRKjf6CTPVmw=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.0-1/css/all.min.css" integrity="sha256-4w9DunooKSr3MFXHXWyFER38WmPdm361bQS/2KUWZbU=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+    
+    
+    
+      
+    
+    
+      
+      
+        
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/styles/github.min.css" crossorigin="anonymous" title="hl-light">
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/styles/dracula.min.css" crossorigin="anonymous" title="hl-dark" disabled>
+        
+      
+    
+
+    
+
+    
+
+    
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.1.2/lazysizes.min.js" integrity="sha256-Md1qLToewPeKjfAHU1zyPwOutccPAm5tahnaw7Osw0A=" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+    
+      
+
+      
+      
+
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" integrity="" crossorigin="anonymous" async></script>
+      
+    
+      
+
+      
+      
+
+      
+    
+
+  
+
+  
+  
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather%7CRoboto+Mono&display=swap">
+  
+
+  
+  
+  
+  
+  <link rel="stylesheet" href="../../../css/academic.css">
+
+  
+
+
+
+
+  
+
+
+  
+
+  <link rel="manifest" href="../../../index.webmanifest">
+  <link rel="icon" type="image/png" href="../../../images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_2.png">
+  <link rel="apple-touch-icon" type="image/png" href="../../../images/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_192x192_fill_lanczos_center_2.png">
+
+  <link rel="canonical" href="../../../courses/2020_simu_inge_num/mouvement_brownien/">
+
+  
+  
+  
+  
+  
+    
+    
+  
+  
+  <meta property="twitter:card" content="summary">
+  
+  <meta property="og:site_name" content="Pierre Gloaguen">
+  <meta property="og:url" content="/courses/2020_simu_inge_num/mouvement_brownien/">
+  <meta property="og:title" content="Le mouvement Brownien | Pierre Gloaguen">
+  <meta property="og:description" content="Rappel des propriétés du mouvement Brownien Pour simuler un mouvement Brownien \(\lbrace B(t) \rbrace_{t \geq 0}\), on se rappellera que le mouvement Brownien est un processus de Markov en temps continu tel que:
+Initialisation: B(0) = 0 Loi de transition: Pour touts temps \(t_2 &gt; t_1\), \(B(t_2) \vert B(t_1) \sim \mathcal{N}(B(t_1), t_2 - t_1)\)   Simulation avec R library(tidyverse) # library(ggplot2); library(purrr); library(dplyr) # are enough if tidyverse doesn&#39;t work Nous allons maintenant coder en R une fonction qui permet de simuler une trajectoire d’un mouvement Brownien à un vecteur de temps fixés:"><meta property="og:image" content="img/map[gravatar:%!s(bool=false) shape:circle]">
+  <meta property="twitter:image" content="img/map[gravatar:%!s(bool=false) shape:circle]"><meta property="og:locale" content="en-us">
+  
+    
+    
+  
+
+  
+
+
+
+  
+
+
+  
+
+
+  
+
+
+
+
+
+  <title>Le mouvement Brownien | Pierre Gloaguen</title>
+
+</head>
+
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" >
+
+  <aside class="search-results" id="search">
+  <div class="container">
+    <section class="search-header">
+
+      <div class="row no-gutters justify-content-between mb-3">
+        <div class="col-6">
+          <h1>Search</h1>
+        </div>
+        <div class="col-6 col-search-close">
+          <a class="js-search" href="#"><i class="fas fa-times-circle text-muted" aria-hidden="true"></i></a>
+        </div>
+      </div>
+
+      <div id="search-box">
+        
+        <input name="q" id="search-query" placeholder="Search..." autocapitalize="off"
+        autocomplete="off" autocorrect="off" spellcheck="false" type="search">
+        
+      </div>
+
+    </section>
+    <section class="section-search-results">
+
+      <div id="search-hits">
+        
+      </div>
+
+    </section>
+  </div>
+</aside>
+
+
+  
+
+
+
+
+
+
+
+<nav class="navbar navbar-expand-lg navbar-light compensate-for-scrollbar" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="d-none d-lg-inline-flex">
+      <a class="navbar-brand" href="../../../">Pierre Gloaguen</a>
+    </div>
+    
+
+    
+    <button type="button" class="navbar-toggler" data-toggle="collapse"
+            data-target="#navbar-content" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span><i class="fas fa-bars"></i></span>
+    </button>
+    
+
+    
+    <div class="navbar-brand-mobile-wrapper d-inline-flex d-lg-none">
+      <a class="navbar-brand" href="../../../">Pierre Gloaguen</a>
+    </div>
+    
+
+    
+    
+    <div class="navbar-collapse main-menu-item collapse justify-content-start" id="navbar-content">
+
+      
+      <ul class="navbar-nav d-md-inline-flex">
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link " href="../../../publication/"><span>Publications</span></a>
+        </li>
+
+        
+        
+
+        
+
+        
+        
+        
+          
+        
+
+        
+        
+        
+        
+        
+        
+
+        <li class="nav-item">
+          <a class="nav-link  active" href="../../../courses/"><span>Courses</span></a>
+        </li>
+
+        
+        
+
+      
+
+        
+      </ul>
+    </div>
+
+    <ul class="nav-icons navbar-nav flex-row ml-auto d-flex pl-md-2">
+      
+      <li class="nav-item">
+        <a class="nav-link js-search" href="#"><i class="fas fa-search" aria-hidden="true"></i></a>
+      </li>
+      
+
+      
+      <li class="nav-item">
+        <a class="nav-link js-dark-toggle" href="#"><i class="fas fa-moon" aria-hidden="true"></i></a>
+      </li>
+      
+
+      
+
+    </ul>
+
+  </div>
+</nav>
+
+
+  
+
+<div class="container-fluid docs">
+  <div class="row flex-xl-nowrap">
+    <div class="col-12 col-md-3 col-xl-2 docs-sidebar">
+      
+
+
+
+
+
+  
+    
+  
+
+
+
+
+<form class="docs-search d-flex align-items-center">
+  <button class="btn docs-toggle d-md-none p-0 mr-3" type="button" data-toggle="collapse" data-target="#docs-nav" aria-controls="docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    <span><i class="fas fa-bars"></i></span>
+  </button>
+
+  
+  <input name="q" type="search" class="form-control" placeholder="Search..." autocomplete="off">
+  
+</form>
+
+<nav class="collapse docs-links" id="docs-nav">
+  
+
+  
+  
+  
+  
+  <div class="docs-toc-item">
+    <a class="docs-toc-link" href="../../../courses/2020_simu_inge_num/">Contenu</a>
+
+  </div>
+  
+  <div class="docs-toc-item active">
+    <a class="docs-toc-link" href="../../../courses/2020_simu_inge_num/mouvement_brownien/">Mouvement Brownien</a>
+
+  </div>
+  
+  <div class="docs-toc-item">
+    <a class="docs-toc-link" href="../../../courses/2020_simu_inge_num/equation_differentielle_stochastique/">Equations différentielles stochastiques</a>
+
+  </div>
+  
+  
+</nav>
+
+    </div>
+
+    
+
+    <main class="col-12 col-md-9 col-xl-8 py-md-3 pl-md-5 docs-content" role="main">
+
+      <article class="article">
+
+        <div class="docs-article-container">
+          <h1>Le mouvement Brownien</h1>
+
+          <div class="article-style">
+            
+
+
+<div id="rappel-des-propriétés-du-mouvement-brownien" class="section level1">
+<h1>Rappel des propriétés du mouvement Brownien</h1>
+<p>Pour simuler un mouvement Brownien <span class="math inline">\(\lbrace B(t) \rbrace_{t \geq 0}\)</span>, on se rappellera que le mouvement Brownien est un processus de Markov en temps continu tel que:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Initialisation:</strong> B(0) = 0</li>
+<li><strong>Loi de transition:</strong> Pour touts temps <span class="math inline">\(t_2 &gt; t_1\)</span>, <span class="math inline">\(B(t_2) \vert B(t_1) \sim \mathcal{N}(B(t_1), t_2 - t_1)\)</span></li>
+</ol>
+</div>
+<div id="simulation-avec-r" class="section level1">
+<h1>Simulation avec R</h1>
+<pre class="r"><code>library(tidyverse) 
+# library(ggplot2); library(purrr); library(dplyr) 
+# are enough if tidyverse doesn&#39;t work</code></pre>
+<p>Nous allons maintenant coder en <code>R</code> une fonction qui permet de simuler une trajectoire d’un mouvement Brownien à un vecteur de temps fixés:</p>
+<pre class="r"><code>simulate_brownian &lt;- function(times){ # Simulation times
+  n_points &lt;- length(times) # Number of points
+  brownian &lt;- rep(NA, n_points) # Vector of outputs
+  brownian[1] &lt;- 0 # Initialization
+  # Now, we simulate next positions thanks to the Brownian properties
+  for(t in 2:n_points){
+    # We use here the definition of the transition law
+    next_mean &lt;- brownian[t - 1] # Expectation of the transition law
+    next_variance &lt;- times[t] - times[t - 1] # Variance of the transition law
+    # Now, we sample from a normal distribution
+    brownian[t] &lt;- rnorm(1, mean = next_mean, sd = sqrt(next_variance))
+  }
+  # Format the output in a data.frame
+  output &lt;- data.frame(t = times, b_t = brownian)
+  return(output) 
+}</code></pre>
+<p>Ainsi, on peut simuler une première trajectoire d’un Brownien:</p>
+<pre class="r"><code>my_times &lt;- seq(from = 0, to = 1, length.out = 1001) # Sequence of length 1001,
+# starting from 0 and ending at 1
+my_first_brownian &lt;- simulate_brownian(times = my_times)</code></pre>
+<p>On peut la représenter visuellement à différents pas de temps <span class="math inline">\(\Delta\)</span> (attention, il s’agit de la même trajectoire à différents pas de temps!).</p>
+<p><img src="../../../courses/2020_simu_inge_num/mouvement_brownien_files/figure-html/plot_brownian-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p><strong>Remarque: </strong> En <code>R</code>, on peut simuler un mouvement Brownien de manière bien plus efficace (en termes de temps d’execution) sans faire de boucle de la manière suivante:</p>
+<pre class="r"><code>simulate_brownian &lt;- function(times){ # Simulation times
+  n_points &lt;- length(times) # Number of points
+  # We can simulate all increments at once, and do the cumulative sum
+  brownian &lt;- c(0, cumsum(rnorm(n_points - 1, 0, sqrt(diff(times))))) # All in once!
+  # Format the output in a data.frame
+  output &lt;- data.frame(t = times, b_t = brownian)
+  return(output)
+}</code></pre>
+<p>Cette écriture, plus synthétique et plus efficace, n’est cependant pas générique, et ne peut pas être appliquée pour la simulation d’équations différentielles stochastiques que nous verrons par la suite.
+Ainsi, on privilégiera la première écriture.</p>
+<div id="loi-du-mouvement-brownien" class="section level2">
+<h2>Loi du mouvement Brownien</h2>
+<p>En faisant plusieurs simulations, on peut vérifier empiriquement la propriété <span class="math inline">\(B(t) \sim \mathcal{N}(0, t)\)</span>.
+Sur le graphique suivant, on a effectué 500 simulations, et on regarde la distribution au temps <span class="math inline">\(t = 1\)</span>.
+On a tracé l’intervalle de confiance théorique à 95%.
+On voit que la distribution empirique semble s’accorder avec la distribution théorique d’une loi Normale.</p>
+<p><img src="../../../courses/2020_simu_inge_num/mouvement_brownien_files/figure-html/simu_multiple_brownian-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>De plus, on peut intuitivement valider deux propriétés du mouvement Brownien, chaque trajectoire est:</p>
+<ul>
+<li>Continue (presque sûrement);</li>
+<li>Nulle part dérivable (presque sûrement).</li>
+</ul>
+</div>
+</div>
+
+          </div>
+
+          
+
+
+
+          
+          <div class="article-widget">
+            
+<div class="post-nav">
+  
+  
+  
+  <div class="post-nav-item">
+    <div class="meta-nav">Next</div>
+    <a href="../../../courses/2020_simu_inge_num/equation_differentielle_stochastique/" rel="prev">Exemple d&#39;équation différentielle stochastique</a>
+  </div>
+  
+</div>
+
+          </div>
+          
+        </div>
+
+        <div class="body-footer">
+          <p>Last updated on Jan 1, 0001</p>
+
+          
+
+
+
+
+
+  
+  
+
+<p class="edit-page">
+  <a href="https://github.com/gcushen/hugo-academic/edit/master/content/courses/2020_simu_inge_num/mouvement_brownien.html">
+    <i class="fas fa-pen pr-2"></i>Edit this page
+  </a>
+</p>
+
+
+
+
+          
+
+        </div>
+
+      </article>
+
+      <footer class="site-footer">
+  
+
+  <p class="powered-by">
+    
+
+    Powered by the
+    <a href="https://sourcethemes.com/academic/" target="_blank" rel="noopener">Academic theme</a> for
+    <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>.
+
+    
+  </p>
+</footer>
+
+
+    </main>
+  </div>
+</div>
+
+
+      
+
+    
+    
+    
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.4/imagesloaded.pkgd.min.js" integrity="sha256-lqvxZrPLtfffUl2G/e7szqSvPBILGbwmsGE1MKlOi0Q=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.isotope/3.0.6/isotope.pkgd.min.js" integrity="sha256-CBrpuqrMhXwcLLUd5tvQ4euBHCdh7wGlDfNz8vbu/iI=" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+
+      
+
+      
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/highlight.min.js" integrity="sha256-1zu+3BnLYV9LdiY85uXMzii3bdrkelyp37e0ZyTAQh0=" crossorigin="anonymous"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/r.min.js"></script>
+        
+      
+
+    
+
+    
+    
+
+    
+    
+    <script>const code_highlighting = true;</script>
+    
+
+    
+    
+    
+    
+    
+    
+    <script>
+      const search_config = {"indexURI":"/index.json","minLength":1,"threshold":0.3};
+      const i18n = {"no_results":"No results found","placeholder":"Search...","results":"results found"};
+      const content_type = {
+        'post': "Posts",
+        'project': "Projects",
+        'publication' : "Publications",
+        'talk' : "Talks"
+        };
+    </script>
+    
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.1/anchor.min.js" integrity="sha256-pB/deHc9CGfFpJRjC43imB29Rse8tak+5eXqntO94ck=" crossorigin="anonymous"></script>
+    <script>
+      anchors.add();
+    </script>
+    
+
+    
+    
+    <script id="search-hit-fuse-template" type="text/x-template">
+      <div class="search-hit" id="summary-{{key}}">
+      <div class="search-hit-content">
+        <div class="search-hit-name">
+          <a href="{{relpermalink}}">{{title}}</a>
+          <div class="article-metadata search-hit-type">{{type}}</div>
+          <p class="search-hit-description">{{snippet}}</p>
+        </div>
+      </div>
+      </div>
+    </script>
+    
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.2.1/fuse.min.js" integrity="sha256-VzgmKYmhsGNNN4Ph1kMW+BjoYJM2jV5i4IlFoeZA9XI=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/jquery.mark.min.js" integrity="sha256-4HLtjeVgH0eIB3aZ9mLYF6E8oU5chNdjU6p6rrXpl9U=" crossorigin="anonymous"></script>
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+      
+    
+    
+    
+    
+    <script src="../../../js/academic.min.0630fec5958cb075a5a38f042b3ddde6.js"></script>
+
+    
+
+
+
+
+
+
+  
+  
+
+  
+<div id="modal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cite</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <pre><code class="tex hljs"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline-primary my-1 js-copy-cite" href="#" target="_blank">
+          <i class="fas fa-copy"></i> Copy
+        </a>
+        <a class="btn btn-outline-primary my-1 js-download-cite" href="#" target="_blank">
+          <i class="fas fa-download"></i> Download
+        </a>
+        <div id="modal-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

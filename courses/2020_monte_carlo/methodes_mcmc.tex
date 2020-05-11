@@ -1,0 +1,208 @@
+Il n'est pas toujours possible de simuler (efficacement) un échantillon i.i.d. selon une densité cible $f$.
+
+Cependant, il existe des outils permettant de construire des chaînes de Markov dont la distribution asymptotique sera donnée par $f$. 
+La chaîne de Markov ainsi construite permettra l'approximation d'espérance par rapport à $f$ grâce à une version "Chaîne de Markov" de la loi des grands nombres.
+
+Le but de ce chapitre est de présenter l'algorithme de Metropolis-Hastings, méthode très générique pour construire une chaîne de Markov adaptée. 
+
+Cet algorithme est très générique et est définit aussi bien que pour des lois discrètes, que pour des lois à densité.
+
+On introduira ici l'algorithme (et la preuve de son fonctionnement), dans le cas discret. La cas continu est présenté bien plus rigoureusement dans \citep{robert2013monte}.
+
+
+\subsection{Rappel sur les chaînes de Markov}
+On se place dans un ensemble $\K$ fini (typiquement l'ensemble $\left\lbrace 1,\dots, K\right\rbrace$).
+
+\begin{definition}{\textit{Chaîne de Markov}}
+Soit $X_0$ une variable aléatoire sur $\K$ de loi $\pi_0$.
+On dit que la suite de variables aléatoires $(X_n)_{n\geq 0}$ à valeurs $\K$ dans est une chaîne de Markov si pour tout $n\geq 1$ est pour tout suite $(k_0,\dots,k_n)$ d'éléments de $\K$, on a :
+
+$$\Pro\left( X_n = k_n \vert X_0 = k_0,\dots,X_{n- 1} = k_{n- 1}\right) = \Pro(X_n = k_n \vert X_{n-1} = k_{n-1})$$
+On dit que cette chaîne de Markov est $\textit{homogène}$ si, pour $i$ et $j$ dans $\K$: 
+ $\Pro(X_n = j \vert X_{n-1} = i) = \Pro(X_1 = j \vert X_{0} = i) = P_{ij}$
+ La matrice $P = (P_{ij})$ est alors appelée matrice de transition de la chaîne de Markov. $P_{ij}$ est la probabilité de transition de $i$ vers $j$. Dans la suite on se placera dans le cas homogène.
+ Une chaîne de Markov homogène est entièrement caractérisée par $\pi_0$ et $P$.
+ 
+ On remarque immédiatement que $0 \leq P_{ij}\leq 1 $ et $\sum_{j}P_{ij} = 1$ 
+\end{definition}
+
+\paragraph{Propriétés} On rappelle quelques propriétés utiles.
+On note $\pi_n$, pour $n \geq 0$ la loi de l'état $X_n$, c'est à dire le vecteur ligne $$\pi_n = (\pi_{n,1} = \Pro(X_n = 1),\dots,\pi_{n, K} = \Pro(X_n = K)).$$
+On a alors:
+
+\begin{itemize}
+\item $\Pro(X_1 = j) = \sum_{i = 1}^k \Pro(X_0 = i) \times \Pro(X_1 = j \vert X_0 = i) = \sum_{i = 1}^k \pi_{0,i}P_{ij}$ 
+Cette relation est résumée par l'équation $\pi_1 = \pi_0P$
+\item On peut montrer par récurrence que 
+$$P^{(n)}_{ij} := \Pro(X_n = j\vert X_0 = i) = (P^n)_{ij}$$ où $P^n$ est la puissance $n$-ième de la matrice $P$. 
+\item On a ainsi: $$\pi_n = \pi_0P^n$$
+\end{itemize}
+
+\begin{definition}{\textit{Mesure invariante pour $P$}}
+Soit $\pi$ un vecteur (ligne) de probabilité (une mesure de probabilité sur $\K$). On dit que $\pi$ est invariante pour la chaîne de Markov de transition $P$ si:
+$$\pi P = \pi$$ 
+\end{definition}
+
+Comme conséquence immédiate, on a que si $\pi_0$ est une mesure invariante pour $P$, alors, pour tout $n$, $\pi_n = \pi_0$. Dans ce cas, les variables aléatoires $X_0,\dots, X_n$ sont identiquement distribuées (mais pas indépendantes!).
+
+\begin{definition}{\textit{Irréductibilité de P}}
+On dit qu'une chaîne de Markov homogène sur $\K$, de transition $P$ est irréductible si 
+$$\forall i,j \in \K\times \K,~\exists~n \text{ tel que } P^{(n)}_{i,j} > 0$$
+Autrement dit, pour deux états de la chaîne, il est possible d'accéder de l'un à l'autre en un temps fini. 
+\end{definition}
+
+\begin{definition}{Chaîne apériodique}
+Soit $(X_n)_{n\geq 1}$ une chaîne de Markov homogène sur $\K$. Pour $k \in \K$, on appelle \textit{période} de l'état $k$, notée $d(k)$, le P.G.C.D. de tous les entiers $n$ tels que $P^{(n)}_{kk} > 0$ (avec la convention $pgcd(\emptyset) = +\infty$):
+$$d(j) = pgcd\left\lbrace n\geq 1, P^{(n)}_{kk} > 0\right\rbrace$$
+Une chaîne est dite apériodique si pour tout $k$ dans $\K$, $d(k) = 1$.
+Pour une chaîne irréductible, une condition suffisante pour être apériodique est qu'il existe un $k\in \K$ tel que $P_{kk} > 0$.
+\end{definition}
+
+\begin{propriete}{\textit{Théorème ergodique}}
+\label{prop:theo:ergo}
+Soit $(X_n)_{n\geq 0}$ une chaîne de Markov de loi initiale $\pi_0$ et de matrice de transition $P$. On suppose que cette chaîne est  irréductible et apériodique.
+Alors: 
+
+\begin{enumerate}
+\item Cette chaîne de Markov admet une unique mesure de probabilité invariante $\pi$.
+\item $X_n \overset{loi}{\longrightarrow} X$ où $X$ est une v.a. de loi $\pi$.
+\item Pour toute fonction $\varphi$ intégrable par rapport à $\pi$, on a :
+$$\frac{1}{n + 1} \sum_{i = 0}^n \varphi(X_i) \underset{n \rightarrow +\infty}{\overset{p.s.}{\longrightarrow}} \mathbb{E}_\pi[\varphi(X)].$$
+\item Si $\varphi(X)$ admet un moment d'ordre supérieur à 2, on a
+ $$\sqrt{n}\left( \frac{1}{n + 1}\sum_{i = 0}^n \varphi(X_i) - \mathbb{E}_\pi[\varphi(X)] \right) \underset{n \rightarrow +\infty}{\overset{Loi}{\longrightarrow}} \mathcal{N}(0, \sigma^2)$$
+\end{enumerate}
+\end{propriete}
+
+Un analogue de cette propriété reste vrai quand la chaîne de Markov est à valeurs dans un ensemble continu (typiquement, $\R^d$). Si le résultat reste moralement le même, il demande un formalisme plus conséquent. On pourra se référer à \citep{robert2013monte} pour une présentation rigoureuse.
+
+\paragraph{Remarque sur le Théorème Central Limite}
+Contrairement au TCL dans le cas i.i.d., la variance $\sigma^2$ n'est absolument pas triviale (il ne s'agit pas de $\V[\varphi(X)]$!), et n'est pas nécessairement facile à estimer. En effet, les variables aléatoires dans l'estimateur Monte Carlo ne sont plus indépendantes, on ne peut donc plus considérer la variance de l'estimateur comme la somme des variances. Ainsi, obtenir un estimateur de la variance (et donc un intervalle de confiance asymptotique) n'est pas nécessairement évident.
+
+\paragraph{Conséquence et intérêt pratique de la Proposition \ref{prop:theo:ergo}} Le théorème ergodique pour les chaînes de Markov stipule qu'il n'est pas nécessaire de savoir simuler un échantillon i.i.d. pour obtenir une approximation de l'espérance selon une loi $\pi$ (ou une densité $f$, ce qui nous intéressera plus souvent en pratique). En effet, si l'on est capable de construire une chaîne de Markov irréductible de mesure de probabilité invariante $\pi$ (ou $f$), alors, en simulant selon cette chaîne de Markov suffisamment longtemps, on pourra approcher toute espérance relativement à $\pi$. De plus, le point 2. de la proposition nous assure qu'au bout d'un certain temps, les $X_n$ obtenus pourront être considérés comme de loi $\pi$ (mais pas indépendants!). Encore faut il être capable de construire une chaîne de Markov (une matrice $P$) irréductible, de loi invariante donnée par $\pi$.
+
+C'est le sens de l'algorithme de Metropolis Hastings.
+
+\subsection{Algorithme de Metropolis-Hastings}
+
+\subsubsection{Définitions}
+
+\begin{definition}{\textit{Réversibilité}}
+Soit $\pi =(\pi_1,\dots, \pi_K)$ une mesure de probabilité sur $\K$ et $(X_n)_{n\geq 0}$ une chaîne de Markov homogène de matrice de transition $P$. 
+On dit que $\pi$ est réversible pour $P$ si elle vérifie la condition d'équilibre:
+$$\forall (i, j) \in \K\times \K,~\pi_i \times P_{ij} = \pi_j \times P_{ji}$$
+\begin{propriete}{\textit{Réversibilité $\Rightarrow$ Invariance}}
+\label{prop:Rev:Inv}
+Si une mesure de probabilité $\pi$ est réversible pour une chaîne de Markov de transition $P$, alors, $\pi$ est une mesure de probabilité invariante pour $P$.
+\end{propriete}
+\begin{proof}
+Soit $\pi$ une mesure de probabilité réversible pour $P$. On a tout de suite que
+\begin{align*}
+\forall j \in \K~~(\pi P)_j & = \sum_{i = 1}^{K} \pi_i P_{ij}& \\
+&= \sum_{i = 1}^{K} \pi_j P_{ji} &\text{ par réversibilité}\\
+&= \pi_j &\text{ par propriété de } P\\
+\Rightarrow \pi P &= \pi&
+\end{align*}
+\end{proof}
+Cette propriété va nous permettre de construire une chaîne de Markov satisfaisant les hypothèses de la Proposition \ref{prop:theo:ergo}.
+\end{definition}
+
+\subsubsection{Algorithme dans le cas discret}
+
+\begin{propriete}{\textit{Algorithme de Metropolis Hastings}}
+Soit $\pi$ une mesure de probabilité sur $\K$ selon laquelle on aimerait simuler (on supposera que $\pi_k > 0$ pour tout $k$).
+Soit $\pi_0$ une mesure de probabilité sur $\K$ telle que $\pi_k > 0\Rightarrow \pi_{0,k} > 0$ et $Q$ une matrice stochastique $\K \times \K$ satisfaisant la condition suivante:
+$$\forall (i, j) \in \K\times \K, Q_{ij} > 0 \Leftrightarrow Q_{ji} > 0$$ 
+
+On considère la suite de variables aléatoires $(X_n)_{n\geq 0}$ construite de la manière suivante:
+\begin{enumerate}
+\item On simule $X_0$ selon $\pi_0$.
+\item Pour $n\geq 1$:
+\begin{enumerate}
+\item On tire $Y_n$ selon la loi $Q_{X_{n-1}\bullet}$ (la ligne de $Q$ donnée par $X_{n-1}$).
+\item On tire une loi uniforme $U$ indépendante de $Y_n$.
+\item On calcule la quantité 
+$$\alpha(X_{n-1}, Y_n) = \min\left(1, \frac{\pi_{Y_n}Q_{Y_n X_{n-1}}}{\pi_{X_{n - 1}}Q_{X_{n-1}Y_n}}\right)$$
+\item On pose:
+$$X_n = \left\lbrace
+\begin{array}{lr}
+Y_n & \text{ si } U\leq\alpha(X_{n-1}, Y_n)\\
+X_{n - 1} &\text{ sinon}
+\end{array}
+ \right.$$
+\end{enumerate}
+\end{enumerate}
+alors, $(X_n)_{n \geq 1}$ est une chaîne de Markov de transition $P$ où
+$$P_{ij} = \left\lbrace \begin{array}{lr}
+Q_{ij}\alpha(i, j) & \text{ si } i\neq j\\
+1 - \sum_{j\neq i} P_{ij} &\text{ sinon}
+\end{array} \right.$$
+De plus $\pi$ est invariante pour $P$.
+\end{propriete}
+\begin{proof}
+La loi de $X_n \vert X_{0:(n-1)}$ ne dépendant que de $X_{n-1}$, la propriété de Markov est évidente par construction. Pour $i\neq j$, on a
+\begin{align*}
+\Pro(X_{n} = j \vert X_{n -1} = i) &= \Pro\left(Y_{n} = j , U\leq \alpha(X_{n-1}, Y_{n})\vert X_{n -1} = i \right)\\
+&=  \Pro\left(Y_{n} = j , U\leq \alpha(i, j)\vert X_{n -1} = i \right)\\
+&=\Pro\left(Y_{n} = j \vert X_{n-1} = x\right)\Pro\left( U\leq \alpha(i, j)\vert X_{n -1} = i \right)\\
+&= Q_{ij}\alpha(i,j)
+\end{align*}
+Ce qui prouve la première partie. De plus, pour $i\neq j$, on a:
+\begin{align*}
+\pi_iP_{ij} &=  \pi_i Q_{ij}\alpha(i, j)\\
+&= \pi_i Q_{ij} \min\left(1, \frac{\pi_{j}Q_{j, i}}{\pi_{i}Q_{i,j}}\right)\\
+&= \min\left(\pi_i Q_{ij}, \pi_{j}Q_{j, i}\right)\\
+&= \pi_{j}Q_{j, i}\min\left(\frac{\pi_i Q_{ij}}{ \pi_{j}Q_{j, i}}, 1 \right)\\
+&= \pi_{j}Q_{j, i}\alpha(j,i)\\
+&=\pi_{j}P_{j,i}
+\end{align*}
+Donc, $\pi$ est réversible pour $P$, donc par la proposition \ref{prop:Rev:Inv}, $\pi$ est invariante.
+On remarquera que si $Q$ est irréductible et apériodique, $P$ l'est aussi, et ainsi, les conditions de la proposition \ref{prop:theo:ergo} sont satisfaites.
+\end{proof}
+
+\subsubsection{Algorithme dans le cas continu}
+
+Supposons qu'on veuille simuler dans $\R^d$ selon une densité $f$, éventuellement connue à une constante près, c'est à dire que 
+$$\forall x \in \R^d,~f(x) = C f^{(u)}(x) = \frac{f^{(u)}(x)}{\int_{\R^d}f^{(u)}(z)\rmd z}$$
+On remplace alors la matrice de transition par un $\textit{noyau de transition}$ sur $\R^d$, à savoir une fonction
+\begin{equation*}
+\begin{array}{lccc}
+q:& \R^d\times \R^d &\mapsto& \R_+\\
+& (x, y) & \mapsto & q(x, y)\geq 0
+\end{array}
+\end{equation*}
+telle que $\int_{\R^d}q(x, y)\rmd y = 1$ (typiquement, la loi d'une marche aléatoire centrée en $x$.
+
+Alors, si on sait simuler, pour $x$ fixé, selon $q$, et qu'on a $q(x, y) > 0 \Leftrightarrow q(y, x) > 0$, alors, l'algorithme de Metropolis reste valide en remplaçant $\pi$ par $f^{(u)}$ et $Q$ par $q$. On notera que dans le ratio on a pas besoin de la constante de normalisation car 
+$$\frac{f^{(u)}(y)}{f^{(u)}(x)} = \frac{f(y)}{f(x)}$$
+
+\paragraph{Conséquence et intérêt de l'algorithme de Metropolis Hastings} L'algorithme de Metropolis Hastings est très puissant, car il permet, sous des conditions faibles, de simuler une chaîne de Markov satisfaisant le théorème ergodique. Il s'agit d'un des algorithmes les plus utilisés en pratique. Un de ces défauts est sa nécessité d'avoir une étape d'acceptation rejet. Ainsi, si la probabilité d'acceptation est faible, la chaîne simulée pourra rester "coincée" dans un état, et la variance de l'estimateur Monte Carlo sera très grande.
+
+\subsection{Échantillonneur de Gibbs}
+
+On considère une vecteur aléatoire en dimension $d$ $X = (X^{(1)},\dots, X^{(d)})$.
+Dans le cas où la loi $f$ (ou la loi $\pi$) est une densité dans en grande dimension ($\R^d$ ou $\K^d$), l'espace à visiter est typiquement grand, et le ratio d'acceptation de l'algorithme de Metropolis Hastings sera souvent assez faible.
+
+Un algorithme très utilisé dans ce cas est l'échantillonneur de Gibbs.
+
+Cet algorithme suppose que l'on sait simuler  selon \textbf{toutes les lois conditionnelles de $X$}. 
+
+Plus formellement, si on note $X^{-(\ell)} =  (X^{(1)},\dots, X^{(\ell-1)}, X^{(\ell+1)}, X^{(d)})$, on est capable de simuler facilement la variable aléatoire $X^{(\ell)}\vert X^{(-\ell)}$, selon la loi $\pi^{(-\ell)}$. 
+Dans ce cas, l'idée est la suivante: 
+\begin{enumerate}
+\item Prendre $X_0 = (X_0^{(1)},\dots, X_0^{(d)})$ tiré selon une loi initiale.
+\item Pour $k \geq 1$:
+\begin{enumerate}
+\item Tirer $\ell$ uniformément dans $\lbrace1,\dots,d\rbrace$
+Actualiser $X_k^{(1)}$ en simulant selon la loi de $X_k^{(1)}\vert X_{k - 1}^{(2)},\dots , X_{k - 1}^{(d)}$;
+\item Simuler $Y$ selon la loi $X^{(\ell)} \vert \lbrace X^{(-\ell)} = X_{k-1}^{(-\ell)} \rbrace$
+\item Poser $X_k = (X_{k - 1}^{(1)},\dots, X_{k-1}^{(\ell-1)}, Y, X_{k - 1}^{(\ell+1)}, X_{k-1}^{(d)})$
+\end{enumerate} 
+\end{enumerate}
+
+On peut montrer que l'échantillonneur de Gibbs est équivalent à un algorithme de Metropolis Hastings où la quantité $\alpha$ est toujours égale à 1, c'est à dire un Metropolis Hastings où ne rejette jamais le candidat.
+
+Encore une fois, cet algorithme fonctionne est utile dès que la simulation des lois conditionnelles est faisable. Si les lois conditionnelles induisent une matrice de transition (ou un noyau) de Markov irréductible et apériodique, alors le théorème ergodique s'applique.
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+\end{document}
