@@ -1,0 +1,16 @@
+---
+title: "Modèle linéaire"
+author: "P. Gloaguen"
+date: ""
+output: 
+  html_document:
+    theme: readable
+---
+
+Cette page contient les documents d'un cours de 15h donné aux étudiants de 2ème année d'Agroparistech.
+
+- [Régression](teaching_docs/cours_diapos_ML_Regression.pdf)
+- Analyse de la variance 
+    - [1 facteur](teaching_docs/cours_diapos_ML_ANOVA.pdf)
+    - [2 facteurs](teaching_docs/cours_diapos_ML_ANOVA_2F.pdf)
+- [Analyse de la covariance](teaching_docs/cours_diapos_ML_ANCOVA.pdf) 

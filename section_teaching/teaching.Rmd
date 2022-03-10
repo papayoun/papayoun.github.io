@@ -11,6 +11,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+- [Modèle linéaire](03_ModeleLineaire.html)
+  - *Cours de 15h dispensé aux étudiants de 2ème année d'e l'ENSTA d'Agroparistech*
 - [Méthodes de Monte Carlo et inférence bayésienne](01_MonteCarlo.html)
   - *Cours de 20h dispensé aux étudiants de 2ème année de l'ENSTA*
 - [Introduction informelle au mouvement Brownien et équations différentielles stochastiques](02_MouvementBrownien.html)
