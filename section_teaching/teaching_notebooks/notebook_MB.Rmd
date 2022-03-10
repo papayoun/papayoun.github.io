@@ -1,0 +1,137 @@
+---
+title: "Le mouvement Brownien"
+subtitle: Définition et simulation avec R
+output: 
+  html_document:
+    theme: readable
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      fig.align = "center")
+library(ggplot2)
+# Nice ggplot theme
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 10, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+# Rappel des propriétés du mouvement Brownien
+
+Pour simuler un mouvement Brownien $\lbrace B(t) \rbrace_{t \geq 0}$, on se rappellera que le mouvement Brownien est un processus de Markov en temps continu tel que:
+
+1. **Initialisation:** B(0) = 0
+1. **Loi de transition:** Pour touts temps $t_2 > t_1$, $B(t_2) \vert B(t_1) \sim \mathcal{N}(B(t_1), t_2 - t_1)$
+
+# Simulation avec R
+
+```{r packages, eval = FALSE, echo = T}
+library(tidyverse) 
+# library(ggplot2); library(purrr); library(dplyr) 
+# are enough if tidyverse doesn't work
+```
+
+Nous allons maintenant coder en `R` une fonction qui permet de simuler une trajectoire d'un mouvement Brownien à un vecteur de temps fixés:
+
+```{r simulate_brownian, echo = TRUE}
+simulate_brownian <- function(times){ # Simulation times
+  n_points <- length(times) # Number of points
+  brownian <- rep(NA, n_points) # Vector of outputs
+  brownian[1] <- 0 # Initialization
+  # Now, we simulate next positions thanks to the Brownian properties
+  for(t in 2:n_points){
+    # We use here the definition of the transition law
+    next_mean <- brownian[t - 1] # Expectation of the transition law
+    next_variance <- times[t] - times[t - 1] # Variance of the transition law
+    # Now, we sample from a normal distribution
+    brownian[t] <- rnorm(1, mean = next_mean, sd = sqrt(next_variance))
+  }
+  # Format the output in a data.frame
+  output <- data.frame(t = times, b_t = brownian)
+  return(output) 
+}
+```
+
+Ainsi, on peut simuler une première trajectoire d'un Brownien:
+
+```{r first_brownian}
+my_times <- seq(from = 0, to = 1, length.out = 1001) # Sequence of length 1001,
+# starting from 0 and ending at 1
+my_first_brownian <- simulate_brownian(times = my_times)
+```
+
+On peut la représenter visuellement à différents pas de temps $\Delta$ (attention, il s'agit de la même trajectoire à différents pas de temps!).
+
+```{r plot_brownian, echo = FALSE, cache = TRUE}
+library(tidyverse) # For ggplot, purrr and dplyr
+plot_brownian <- function(my_data, thin){
+  indices <- seq(from = 1, to = nrow(my_data), by = thin) # Chosen lines
+  sub_data <- slice(my_data, indices) # Extract of the data
+  my_delta <- diff(sub_data$t)[1] # Time step
+  ggplot(sub_data) +
+    aes(x = t, y = b_t) + 
+    geom_line() +
+    labs(x = "Temps", y = "B(t)", title = bquote(expr = {Delta == .(my_delta)}))
+}
+purrr::map(c(100, 10, 1), plot_brownian, my_data = my_first_brownian) %>% 
+  do.call(what = function(...) gridExtra::grid.arrange(..., ncol = 3))
+```
+
+**Remarque: ** En `R`, on peut simuler un mouvement Brownien de manière bien plus efficace (en termes de temps d'execution) sans faire de boucle de la manière suivante:
+```{r simulate_brownian_cumsum}
+simulate_brownian <- function(times){ # Simulation times
+  n_points <- length(times) # Number of points
+  # We can simulate all increments at once, and do the cumulative sum
+  brownian <- c(0, cumsum(rnorm(n_points - 1, 0, sqrt(diff(times))))) # All in once!
+  # Format the output in a data.frame
+  output <- data.frame(t = times, b_t = brownian)
+  return(output)
+}
+```
+
+Cette écriture, plus synthétique et plus efficace, n'est cependant pas générique, et ne peut pas être appliquée pour la simulation d'équations différentielles stochastiques que nous verrons par la suite.
+Ainsi, on privilégiera la première écriture.
+
+## Loi du mouvement Brownien
+
+```{r parametres_simu_multiple, echo = FALSE}
+n_sim <- 500
+tF <- 1
+```
+
+En faisant plusieurs simulations, on peut vérifier empiriquement la propriété $B(t) \sim \mathcal{N}(0, t)$. 
+Sur le graphique suivant, on a effectué `r n_sim` simulations, et on regarde la distribution au temps $t = `r tF`$.
+On a tracé l'intervalle de confiance théorique à 95%.
+On voit que la distribution empirique semble s'accorder avec la distribution théorique d'une loi Normale.
+
+```{r simu_multiple_brownian, echo = FALSE, cache = TRUE}
+set.seed(1)
+all_brownians <- rerun(n_sim, simulate_brownian(times = seq(0, tF, length = 101))) %>% 
+  bind_rows(.id = "Replicate")
+p <- ggplot(all_brownians) +
+  aes(x = t, y = b_t) +
+  geom_line(aes(group = Replicate), alpha = 0.2) +
+  geom_point(data = filter(all_brownians, t == 1), size = 1) +
+  labs(x = "Temps", y = "B(t)") +
+  stat_function(fun = function(x) 1.96 * sqrt(x), col = "red", linetype = 2) +
+  stat_function(fun = function(x) -1.96 * sqrt(x), col = "red", linetype = 2)
+ggExtra::ggMarginal(p, margins = "y", type = "densigram", fill = "lightblue",
+                    col = "darkblue")
+```
+
+De plus, on peut intuitivement valider deux propriétés du mouvement Brownien, chaque trajectoire est:
+
+- Continue (presque sûrement);
+- Nulle part dérivable (presque sûrement).

@@ -1,0 +1,38 @@
+name: "Pierre Gloaguen"
+output_dir: "."
+navbar:
+  logo: img/logo.jpg
+  title: 'Pierre Gloaguen'
+  left:
+  - text: "Publications"
+    icon: fa-file-text-o
+    href: section_publications/publications.html
+  - text: "Teaching"
+    icon: fa-laptop
+    href: section_teaching/teaching.html
+  # - text: "Research "
+  #   icon: fa-chart-area
+  #   menu:
+  #     - text: "Research interests"
+  #       icon: fa-flask
+  #       href: research.html
+  #     - text: "Publications"
+  #       href: publications.html
+  #       icon: fa-file-text-o
+      # - text: "Talks"
+      #   href: talks.html
+      #   icon: fa-comment-o 
+      # - text: "Students"
+      #   href: students.html
+      #   icon: fa-graduation-cap
+
+  #            
+  # right:
+  # - text: "Github"
+  #   icon: fab fa-github
+  #   href: https://github.com/Sophiedonnet
+
+output:
+  html_document:
+    theme: readable
+    highlight: tango

@@ -1,0 +1,59 @@
+---
+title: "Méthodes de Monte Carlo et inférence bayésienne"
+author: "P. Gloaguen"
+date: ""
+output: 
+  html_document:
+    theme: readable
+---
+
+## Cours
+
+- [Polycopié](teaching_docs/cours_poly_MonteCarlo.pdf)
+- [Diapos](teaching_docs/cours_diapos_MonteCarlo.pdf)
+
+## Travaux dirigés
+
+- [Enoncés](teaching_docs/td_enonce_MonteCarlo.pdf)
+- [Corrigés](teaching_docs/td_corrige_MonteCarlo.pdf)
+
+### Données pour les travaux dirigés
+
+- [Données pour l'exercice 5 du TD1](teaching_docs/data_hobart.txt). En `R`, vous pouvez les importez avec le code suivant:
+
+```{r import_hobart, eval = FALSE}
+hobart <- read.table("data_hobart.txt", sep = ";", header = TRUE)
+```
+
+- [Données pour l'exercice 5 du TD3](data_presence.txt). En `R`, vous pouvez les importez avec le code suivant:
+
+```{r import_presence, eval = FALSE}
+donnees_presence <- read.table("data_presence.txt",  
+                               sep = ";", header = TRUE, 
+                                colClasses = c(presence = "factor") # La colonne presence est qualitative
+                              )
+```
+
+-  [Données pour l'exercice 2 du TD4](data_presence_complet.txt). En `R`, vous pouvez les importez avec le code suivant:
+
+```{r donnees_presence_complet, eval = FALSE}
+donnees_presence_complet <- read.table("data_presence_complet.txt",  
+                                       sep = ";", header = TRUE, 
+                                       colClasses = c(presence = "factor") # La colonne presence est qualitative
+)
+```
+
+- Données pour l'exercice 5 du TD4:
+    - [Texte à décrypter](teaching_docs/data_texte_crypte.txt)
+    - [Matrice de transition](teaching_docs/data_transition_matrix.txt)
+On pourra charger ces documents ainsi
+    
+```{r code_lecture, eval = FALSE}
+# Codes d'imports
+library(dplyr)
+transition_matrix <- read.table("data_transition_matrix.txt", 
+                                sep = ";", header = FALSE) %>% 
+  as.matrix()
+library(readr)
+texte_crypte <- read_file("data_texte_crypte.txt")
+```

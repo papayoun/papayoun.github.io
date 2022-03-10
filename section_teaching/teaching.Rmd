@@ -1,0 +1,17 @@
+---
+title: "Teaching activities"
+author: "Pierre Gloaguen"
+date: ""
+output: 
+  html_document:
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- [Méthodes de Monte Carlo et inférence bayésienne](01_MonteCarlo.html)
+  - *Cours de 20h dispensé aux étudiants de 2ème année de l'ENSTA*
+- [Introduction informelle au mouvement Brownien et équations différentielles stochastiques](02_MouvementBrownien.html)
+  - *Cours/TD de 6h dispensé aux étudiants de 2ème année d'Agroparistech*

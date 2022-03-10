@@ -1,0 +1,18 @@
+---
+title: "Introduction informelle au mouvement brownien et aux équations différentielles stochastiques"
+author: "P. Gloaguen"
+date: ""
+output: 
+  html_document:
+    theme: readable
+---
+
+Cette page contient les documents d'un cours de 6h donné aux étudiants de 2ème année d'Agroparistech.
+
+- [Diapos de cours](teaching_docs/cours_diapos_MouvementBrownien.pdf)
+- Travaux dirigés:
+    - [Enoncé](teaching_docs/td_ennonce_MouvementBrownien.pdf)
+    - [Corrigé](teaching_docs/td_corrige_MouvementBrownien.pdf)
+- Notebooks en `R`:
+    - [Le mouvement Brownien](teaching_notebooks/notebook_MB.html)
+    - [Equations différentielles stochastiques](teaching_notebooks/notebook_EDS.html)

@@ -1,0 +1,70 @@
+---
+title: "List of publications"
+author: "Pierre Gloaguen"
+date: ""
+output: 
+  html_document:
+    theme: readable
+---
+
+## Submitted papers
+
+- **Backward importance sampling for online estimation of state space models**
+    - Submitted in the *Journal of Computational and Graphical statistics*
+    - Joint work with A. Martin, M.P. Etienne, S. Le Corff and J. Olsson
+    - Numerical illustrations of the performances of a new online sequential Monte Carlo smoother on complex models, namely multivariate stochastic differential equations and recurrent neural networks. 
+    - [Link to the paper](https://hal.archives-ouvertes.fr/hal-02476102/document) 
+
+- **Macrolitter video counting on river banks with state space models for moving cameras**
+    - Submitted in *Computo (the journal of French Statistical Society)* 
+    - Joint work with M.Chagneux, S. Le Corff and C. Ollion
+    - Coupling deep learning image segmentation methods with state space models to count plastic debris on river banks. 
+
+## Book chapters
+
+-   **Reconstruction de trajectoires et identifications de comportements à partir de données de géolocalisation/Trajectory reconstruction and behavior identification using geolocation data**
+    - To appear in the book *Statistical Approaches for Hidden Variables in Ecology*
+    - Joint work with M.P. Etienne 
+    - [Link to the book website](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119902799).
+
+## Accepted or published papers
+
+- **A pseudo-marginal sequential Monte Carlo online smoothing algorithm**
+    - To appear in *Bernoulli*
+    - Joint work with S. Le Corff and J. Olsson. 
+    - Theoretical guarantees for an online estimator for smoothing expectations in general state space models.
+    - [Link to the paper](https://hal.archives-ouvertes.fr/hal-02194237v2/document) 
+
+- **Scalable clustering of segmented trajectories within a continuous time framework. Application to maritime traffic data**
+    - *Machine Learning*, 2021
+    - Joint work with L. Chapel, C. Friguet and R. Tavenard.
+    - A unified framework for segmentation and clustering of bivariate time-series using non parametric Bayesian methods (Hierarchical Dirichlet process) and Bayesian variational inference. 
+    - [Link to the review](https://link.springer.com/article/10.1007/s10994-021-06004-8)
+    
+- **The Langevin diffusion as a continuous-time model of animal movement and habitat selection**
+    - *Methods in ecology and evolution*, 2019
+    - Joint work with T.Michelot, P. Blackwell and M.P. Etienne
+    - A new continuous time model to link animal movement with resource selection functions. 
+    - [Link to the paper](https://besjournals.onlinelibrary.wiley.com/doi/epdf/10.1111/2041-210X.13275) 
+    
+- **Stochastic differential equation based on a multimodal potential to model movement data in ecology** 
+    - *Journal of the Royal Statistical Society, Series:C (Applied Statistics)*, 2018
+    - Joint work with M.P. Etienne and S. Le Corff
+    - A new movement model for animal movement and a benchmark for different inference methods for these methods in ecology.
+    - [Link to the journal](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/rssc.12251)
+- **Trypanosomiasis challenge estimation using the diminazene aceturate (Berenil) index in Zebu in Gabon**
+    - *Tropical Animal Health and Production*, 2017
+    - Joint work with B. Cossic, B. Adjahoutonon, G.L. Dibanganga, G. Maganga, P. Leroy, E.T. MacLeod and K.Picozzi 
+    - Longitudinal study to characterize sleeping sickness of livestock in Gabon
+    - [Link to the journal](https://link.springer.com/article/10.1007/s11250-017-1239-2)
+- **Is speed through water a better proxy for fishing activities than speed over ground ?** 
+    - *Aquatic Living Resources*, 2016
+    - Joint work with M. Woillez, S. Mahévas, Y. Vermard and E. Rivot
+    - Coupling of a hidden Markov model to a numerical model of surface currents to improve estimation of fishing efforts.
+    - [Link to the journal](https://www.alr-journal.org/articles/alr/abs/2016/02/alr150057/alr150057.html)
+- **An autoregressive model to describe fishing vessel movement and activity**
+    - *Environmetrics*, 2015
+    - Joint work with S. Mahévas, E. Rivot, M. Woillez Y. Vermard and M.P. Etienne
+    - A new hidden Markov model with dependant observations to infer activities of fishing vessels.
+    - [Link to the journal](onlinelibrary.wiley.com/doi/10.1002/env.2319/abstract)
+    
