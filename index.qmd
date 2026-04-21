@@ -28,3 +28,7 @@ My research focuses on:
 ### Teaching 
 
 My teaching mainly focuses on statistical modelling for experimental sciences, starting with the linear model and its extensions, and ending with Markov processes for models in biology and ecology. 
+
+### Contact
+
+- Courriel: `prenom[dot]nom[at]univ-ubs.fr`
