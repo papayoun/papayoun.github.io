@@ -1,0 +1,115 @@
+---
+title: "Programme de l'édition Rochebrune 2026"
+editor_options: 
+  chunk_output_type: console
+---
+
+
+## Cours quotidien:
+
+Tous les jours de 8h45 à 9h45: **Gabriel Victorino Cardoso** *Using generative priors in traditional Bayesian frameworks*. 
+
+```{r}
+#| echo: false 
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(readODS)
+get_prenom_nom <- function(Nom, Prenom){
+  Nom <- str_to_title(Nom)
+  Prenom <- str_to_title(Prenom)
+  if(Nom %in% c("Kon-Kam-King", "Le-Corff")){
+    Nom <- str_replace_all(Nom, "-", " ")
+  }
+  if(is.na(Nom)){
+    if(is.na(Prenom)){
+      return("")
+    }
+    else{
+      return(Prenom)
+    }
+  }
+  else if(is.na(Prenom)){
+    return(Nom)
+  }
+  else if(str_detect(Prenom, "-And-") & str_detect(Nom, "-And-")){
+    Prenoms <- str_split_1(Prenom, "-And-")
+    Noms <- str_split_1(Nom, "-And-")
+    return(paste(Prenoms, Noms) %>% 
+             paste(collapse = " et "))
+  }
+  return(paste(Prenom, Nom))
+}
+programme <- read_ods("26_programme.ods") %>% 
+  mutate(Prenom_Nom = map2_chr(.x = Nom, 
+                               .y = Prenom, 
+                               get_prenom_nom)) %>% 
+  select(Numero, Nom, Prenom_Nom, Jour, Demi, Session, Heure, Titre)
+fichiers_exposes <- data.frame(pres_path = dir("26_presentations/")) %>% 
+  mutate(Numero = map_dbl(str_split(pres_path, "_"), 
+                          function(x) as.numeric(x[1])),
+         Nom = map_chr(str_split(pres_path, "_"), 
+                       function(x) str_remove(x[2], ".pdf") %>% 
+                         str_remove(".html")) %>% 
+           str_to_upper())  %>% 
+  mutate(pres_path = paste0("26_presentations/", pres_path))
+fichier_complet <- left_join(programme, fichiers_exposes)
+```
+
+
+```{r}
+#| echo: false
+#| results: asis
+
+foo <- function(Heure, Prenom_Nom, Titre, pres_path){
+  if(Prenom_Nom == "Cloture"){
+    result <- paste0("- ", Heure, " [*Clôture*](", pres_path,")")
+  }
+  else if(Prenom_Nom != "" & !is.na(pres_path)){
+    result <- paste0("- ", Heure, " **", 
+                     Prenom_Nom, "** [*", Titre, "*](", pres_path,")")
+  }
+  else if(Prenom_Nom != "" & is.na(pres_path)){
+    result <- paste0("- ", Heure, " **", 
+                     Prenom_Nom, "** *", Titre, "*")
+  }
+  else{
+    result <- paste0("- ", Heure, " *", Titre, "*")
+  }
+  return(result)
+}
+
+full_text <- NULL
+jours <- unique(fichier_complet$Jour)
+for(jour_ in jours){
+  pres_jours <- dplyr::filter(fichier_complet, Jour == jour_)
+  full_text <- paste(full_text, 
+                     paste("\n#", jour_, "\n"), # titre du jour
+                     collapse = "\n")
+  for(demi_ in unique(pres_jours$Demi)){
+    full_text <- paste("", full_text, 
+                       paste("\n##", demi_, "\n"), # titre demi journée
+                       collapse = "\n")
+    pres_demis <- filter(pres_jours, Demi == demi_)
+    for(session_ in unique(pres_demis$Session)){
+      titre_session <- 
+        full_text <- paste(full_text, 
+                           paste("\n###", session_, "\n"), # titre session
+                           collapse = "\n")
+      pres_sessions <- filter(pres_demis, Session == session_) %>% 
+        select(Heure, Prenom_Nom, Titre, pres_path)
+      liste_titres <- pmap_chr(pres_sessions, foo) %>% 
+        paste(collapse = "\n ") %>% 
+        paste("\n")
+      full_text <- paste(full_text, 
+                         liste_titres, # titre session
+                         collapse = "\n")
+    }
+  }
+}
+
+cat(full_text)
+```
+
+

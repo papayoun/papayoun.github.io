@@ -1,0 +1,32 @@
+project:
+  type: website
+  output-dir: docs   # ou "." si tu veux comme avant
+
+lang: en
+execute: 
+  echo: false
+website:
+  title: ""
+  navbar:
+    left:
+      - text: "About me"
+        icon: house
+        href: index.qmd
+      - text: "Research"
+        icon: binoculars
+        menu:
+          - text: Publications
+            href: section_publications/publications.qmd
+          - text: Animation
+            href: section_animation/animation.qmd
+      - text: "Teaching"
+        icon: laptop
+        href: section_teaching/teaching.qmd
+
+format:
+  html:
+    theme: flatly
+    toc: true
+    css: styles.css
+
+

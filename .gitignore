@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+/.quarto/
+section_*/*_cache/
+section_*/*_files/
+section_*/*/*_cache/
+section_*/*/*_files/

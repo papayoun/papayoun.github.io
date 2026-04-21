@@ -1,0 +1,15 @@
+---
+title: "Animation in research"
+author: "Pierre Gloaguen"
+date: ""
+---
+
+```{r}
+#| label: setup-teaching
+#| include: false
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- Every two years since 2022, I have been coorganizing (with Lucia Clarotto, Sophie Donnet and Eric Parent) the [Statistiques au sommet de Rochebrune workshop](Rochebrune/Rochebrune.html).
+- In 2025, I coorganized with S. Le Corff, N. Jouvin and J. Stoehr, an automn school on [Recent advances in Machine learning](https://mlataussois.sciencesconf.org/).
